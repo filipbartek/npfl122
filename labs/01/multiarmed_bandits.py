@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 import argparse
-import sys
+import os
+import warnings
 
 import numpy as np
+import scipy.special
 
 class MultiArmedBandits():
     def __init__(self, bandits, episode_length, seed=42):
@@ -46,28 +48,78 @@ def main(args):
     # Create environment
     env = MultiArmedBandits(args.bandits, args.episode_length)
 
+    if args.mode == "gradient" and args.alpha == 0:
+        warnings.warn("alpha is zero.")
+
+    episode_average_rewards = np.empty(args.episodes)
+
+    show_progress = 'MULTIARMED_BANDITS_TQDM' in os.environ
+    if show_progress:
+        import tqdm
+        t = tqdm.tqdm(desc=args.mode, total=args.episodes, unit="episode")
+
     for episode in range(args.episodes):
         env.reset()
 
-        # TODO: Initialize parameters (depending on mode).
+        # Initialize parameters (depending on mode).
+        current_episode_trials = 0
+        current_episode_total_reward = 0
+        if args.mode in ["greedy", "ucb"]:
+            n = np.zeros(args.bandits, dtype=np.int)
+            q = np.full(args.bandits, args.initial, dtype=np.float)
+        if args.mode == "gradient":
+            h = np.zeros(args.bandits, dtype=np.float)
 
         done = False
         while not done:
-            # TODO: Action selection according to mode
+            # Action selection according to mode
+            action = None
             if args.mode == "greedy":
-                action = None
+                if np.random.random() < args.epsilon:
+                    # Explore
+                    action = np.random.choice(args.bandits)
+                else:
+                    # Exploit
+                    action = np.argmax(q)
             elif args.mode == "ucb":
-                action = None
+                if current_episode_trials == 0:
+                    assert np.all(n == 0)
+                    assert np.all(q == q[0])
+                    action = np.random.choice(args.bandits)
+                else:
+                    with np.errstate(divide='ignore'):
+                        assert np.log(current_episode_trials + 1) != 0
+                        action = np.argmax(q + args.c * np.sqrt(np.log(current_episode_trials + 1) / n))
             elif args.mode == "gradient":
-                action = None
+                pi = scipy.special.softmax(h)
+                action = np.random.choice(args.bandits, p=pi)
 
             _, reward, done, _ = env.step(action)
 
-            # TODO: Update parameters
+            # Update parameters
+            current_episode_trials += 1
+            current_episode_total_reward += reward
+            if args.mode in ["greedy", "ucb"]:
+                n[action] += 1
+                if args.alpha == 0:
+                    q[action] += (reward - q[action]) / n[action]
+                else:
+                    assert args.alpha > 0
+                    assert args.alpha <= 1
+                    q[action] += (reward - q[action]) * args.alpha
+            if args.mode == "gradient":
+                h += args.alpha * reward * (np.eye(args.bandits)[action] - pi)
 
-    # TODO: For every episode, compute its average reward (a single number),
+        episode_average_rewards[episode] = current_episode_total_reward / current_episode_trials
+
+        if show_progress:
+            t.set_postfix({"mean": episode_average_rewards[:episode + 1].mean(), "std": episode_average_rewards[:episode + 1].std()})
+            t.update()
+
+    # For every episode, compute its average reward (a single number),
     # obtaining `args.episodes` values. Then return the final score as
     # mean and standard deviation of these `args.episodes` values.
+    return episode_average_rewards.mean(), episode_average_rewards.std()
 
 if __name__ == "__main__":
     mean, std = main(parser.parse_args())

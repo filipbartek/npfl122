@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 import argparse
-import os
 import warnings
 
 import numpy as np
@@ -53,10 +52,11 @@ def main(args):
 
     episode_average_rewards = np.empty(args.episodes)
 
-    show_progress = 'MULTIARMED_BANDITS_TQDM' in os.environ
-    if show_progress:
+    try:
         import tqdm
         t = tqdm.tqdm(desc=args.mode, total=args.episodes, unit="episode")
+    except ModuleNotFoundError:
+        pass
 
     for episode in range(args.episodes):
         env.reset()
@@ -112,9 +112,12 @@ def main(args):
 
         episode_average_rewards[episode] = current_episode_total_reward / current_episode_trials
 
-        if show_progress:
+        if 't' in locals():
             t.set_postfix({"mean": episode_average_rewards[:episode + 1].mean(), "std": episode_average_rewards[:episode + 1].std()})
             t.update()
+
+    if 't' in locals():
+        t.close()
 
     # For every episode, compute its average reward (a single number),
     # obtaining `args.episodes` values. Then return the final score as

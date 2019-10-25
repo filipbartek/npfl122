@@ -78,9 +78,9 @@ def iterative_policy_evaluation(policy, iterations, gamma, value_function=None):
             break
         value_function = value_function_new
     if iteration_converged is None:
-        logging.info(f'Iterative policy evaluation finished without convergence after {iterations} iterations.')
+        logging.debug(f'Iterative policy evaluation finished without convergence after {iterations} iterations.')
     else:
-        logging.info(f'Iterative policy evaluation converged after {iteration_converged} iterations.')
+        logging.debug(f'Iterative policy evaluation converged after {iteration_converged} iterations.')
     return value_function
 
 

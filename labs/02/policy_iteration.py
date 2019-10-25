@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 
 import logging
+import sys
+
 
 class GridWorld:
     # States in the gridworld are the following:
@@ -131,6 +133,17 @@ def policy_iteration(steps, iterations, gamma):
         value_function = value_function_new
     return policy, value_function
 
+
+def print_results(policy, value_function, file=sys.stdout):
+    for l in range(3):
+        for c in range(4):
+            state = l * 4 + c
+            if state >= 5: state -= 1
+            print("        " if l == 1 and c == 1 else "{:-8.2f}".format(value_function[state]), end="", file=file)
+            print(" " if l == 1 and c == 1 else GridWorld.actions[policy[state]], end="", file=file)
+        print(file=file)
+
+
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
 
@@ -150,12 +163,4 @@ if __name__ == "__main__":
     # not overwrite the current value function when computing its improvement).
 
     policy, value_function = policy_iteration(args.steps, args.iterations, args.gamma)
-
-    # Print results
-    for l in range(3):
-        for c in range(4):
-            state = l * 4 + c
-            if state >= 5: state -= 1
-            print("        " if l == 1 and c == 1 else "{:-8.2f}".format(value_function[state]), end="")
-            print(" " if l == 1 and c == 1 else GridWorld.actions[policy[state]], end="")
-        print()
+    print_results(policy, value_function)

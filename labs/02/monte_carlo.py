@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
-import numpy as np
-
 import cart_pole_evaluator
+import numpy as np
 
 if __name__ == "__main__":
     # Fix random seed
@@ -9,6 +8,7 @@ if __name__ == "__main__":
 
     # Parse arguments
     import argparse
+
     parser = argparse.ArgumentParser()
     parser.add_argument("--episodes", default=None, type=int, help="Training episodes.")
     parser.add_argument("--render_each", default=None, type=int, help="Render some episodes.")

@@ -114,14 +114,21 @@ def policy_iteration(steps, iterations, gamma):
     # Start with zero value function and "go North" policy
     policy = [0] * GridWorld.states
     value_function = [0] * GridWorld.states
+    policy_converged = False
     for step in range(steps):
         # We baseline the value function with the one we got from the previous policy evaluation.
-        value_function = iterative_policy_evaluation(policy, iterations, gamma, value_function)
-        policy_new = greedy_policy(value_function, gamma)
-        if policy_new == policy:
+        value_function_new = iterative_policy_evaluation(policy, iterations, gamma, value_function)
+        policy_new = greedy_policy(value_function_new, gamma)
+        assert not policy_converged or policy_new == policy
+        if not policy_converged and policy_new == policy:
             logging.info(f'Policy converged after {step} steps.')
-            break
+            policy_converged = True
         policy = policy_new
+        if value_function_new == value_function:
+            logging.info(f'Value function converged after {step} steps.')
+            assert policy_converged
+            break
+        value_function = value_function_new
     return policy, value_function
 
 if __name__ == "__main__":

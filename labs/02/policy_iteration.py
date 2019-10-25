@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+import logging
+
 class GridWorld:
     # States in the gridworld are the following:
     # 0 1 2 3
@@ -32,7 +34,94 @@ class GridWorld:
         if state >= 5: state -= 1
         return [probability, +1 if state == 3 else -100 if state == 6 else 0, state]
 
+def action_value_function(value_function, s, a, gamma):
+    """
+    Estimate value of action `a` taken from state `s`.
+
+    See [npfl122-02.pdf](https://ufal.mff.cuni.cz/~straka/courses/npfl122/1920/slides.pdf/npfl122-02.pdf) slide 5.
+    """
+    assert gamma >= 0
+    assert gamma <= 1
+    result = 0
+    for probability, reward, new_state in GridWorld.step(s, a):
+        assert probability >= 0
+        assert probability <= 1
+        assert new_state >= 0
+        assert new_state < len(value_function)
+        result += probability * (reward + gamma * value_function[new_state])
+    return result
+
+# Iterate to implement iterative policy evaluation.
+def improve_value_function_once(value_function, policy, gamma):
+    output_value_function = [0] * GridWorld.states
+    for s in range(GridWorld.states):
+        # The policy is deterministic: it always chooses action `policy[s]` in state `s`.
+        output_value_function[s] = action_value_function(value_function, s, policy[s], gamma)
+    return output_value_function
+
+def iterative_policy_evaluation(policy, iterations, gamma, value_function=None):
+    """
+    Evaluate policy by iterative policy evaluation algorithm.
+
+    See [npfl122-02.pdf](https://ufal.mff.cuni.cz/~straka/courses/npfl122/1920/slides.pdf/npfl122-02.pdf) slide 22.
+    """
+    if value_function is None:
+        value_function = [0] * GridWorld.states
+    iteration_converged = None
+    for iteration in range(iterations):
+        value_function_new = improve_value_function_once(value_function, policy, gamma)
+        if value_function_new == value_function:
+            iteration_converged = iteration
+            break
+        value_function = value_function_new
+    if iteration_converged is None:
+        logging.info(f'Iterative policy evaluation finished without convergence after {iterations} iterations.')
+    else:
+        logging.info(f'Iterative policy evaluation converged after {iteration_converged} iterations.')
+    return value_function
+
+def greedy_policy(value_function, gamma):
+    """
+    Greedily choose a new policy based on a value function.
+
+    AKA policy improvement.
+
+    See [npfl122-02.pdf](https://ufal.mff.cuni.cz/~straka/courses/npfl122/1920/slides.pdf/npfl122-02.pdf) slide 27, 23.
+    """
+    output_policy = [0] * GridWorld.states
+    for s in range(GridWorld.states):
+        best_expected_return = None
+        best_a = None
+        for a in range(len(GridWorld.actions)):
+            expected_return = action_value_function(value_function, s, a, gamma)
+            if best_expected_return is None or expected_return > best_expected_return:
+                best_expected_return = expected_return
+                best_a = a
+        output_policy[s] = best_a
+    return output_policy
+
+def policy_iteration(steps, iterations, gamma):
+    """
+    Produce policy and value function using policy iteration algorithm.
+
+    See [npfl122-02.pdf](https://ufal.mff.cuni.cz/~straka/courses/npfl122/1920/slides.pdf/npfl122-02.pdf) slide 27.
+    """
+    # Start with zero value function and "go North" policy
+    policy = [0] * GridWorld.states
+    value_function = [0] * GridWorld.states
+    for step in range(steps):
+        # We baseline the value function with the one we got from the previous policy evaluation.
+        value_function = iterative_policy_evaluation(policy, iterations, gamma, value_function)
+        policy_new = greedy_policy(value_function, gamma)
+        if policy_new == policy:
+            logging.info(f'Policy converged after {step} steps.')
+            break
+        policy = policy_new
+    return policy, value_function
+
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
+
     # Parse arguments
     import argparse
     parser = argparse.ArgumentParser()
@@ -41,17 +130,13 @@ if __name__ == "__main__":
     parser.add_argument("--gamma", default=1.0, type=float, help="Discount factor.")
     args = parser.parse_args()
 
-    # Start with zero value function and "go North" policy
-    value_function = [0] * GridWorld.states
-    policy = [0] * GridWorld.states
-
-    # TODO: Implement policy iteration algorithm, with `args.steps` steps of
+    # Implement policy iteration algorithm, with `args.steps` steps of
     # policy evaluation/policy improvement. During policy evaluation, use the
     # current value function and perform `args.iterations` applications of the
     # Bellman equation. Perform the policy evaluation synchronously (i.e., do
     # not overwrite the current value function when computing its improvement).
 
-    # TODO: The final greedy policy should be in `policy`
+    policy, value_function = policy_iteration(args.steps, args.iterations, args.gamma)
 
     # Print results
     for l in range(3):

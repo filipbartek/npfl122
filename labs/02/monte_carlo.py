@@ -26,13 +26,17 @@ def main(args):
             pi_file.write(repr(pi))
             np.set_printoptions(**options)
 
+    evaluate_pi(env, pi, args.render_each)
+
+
+def evaluate_pi(env, pi, render_each):
     # Perform last 100 evaluation episodes
     start_evaluate = True
 
     # Run 100 episodes for evaluation.
     # Stop exploring during evaluation.
     for evaluation_episode_i in range(100):
-        generate_episode(env, pi, 0.0, args.render_each and env.episode and env.episode % args.render_each == 0)
+        generate_episode(env, pi, 0.0, render_each and env.episode and env.episode % render_each == 0)
 
 
 def train_pi(args, env):

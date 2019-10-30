@@ -1,14 +1,20 @@
 #!/usr/bin/env python3
 
 import logging
-import math
 import time
 
 import cart_pole_evaluator
 import numpy as np
+import scipy.stats
 
 
 def main(args):
+    try:
+        from livelossplot import PlotLosses
+        liveplot = PlotLosses()
+    except ModuleNotFoundError:
+        pass
+
     # Create the environment
     env = cart_pole_evaluator.environment()
     pi = np.zeros(env.states, dtype=np.int)
@@ -17,12 +23,9 @@ def main(args):
     training = True
     training_episode_i = 0
     returns = []
-
-    try:
-        from livelossplot import PlotLosses
-        liveplot = PlotLosses()
-    except ModuleNotFoundError:
-        pass
+    epsilon = args.epsilon
+    window_size = 100
+    slope = 0
 
     while training:
         if args.episodes is not None and training_episode_i >= args.episodes:
@@ -30,23 +33,27 @@ def main(args):
 
         time_episode_start = time.time()
 
-        epsilon = current_epsilon(args, training_episode_i)
         episode = generate_episode(env, pi, epsilon,
                                    args.render_each and training_episode_i % args.render_each == 0)
         improve_policy(pi, q, n, episode, args.gamma)
 
         returns.append(len(episode))
-        assert len(returns[-100:]) <= 100
-        mean_return = np.mean(np.array(returns[-100:]))
-        if mean_return >= 495 and len(episode) == 500:
+        if len(returns) >= window_size / 2:
+            slope, _, _, _, _ = scipy.stats.linregress(np.arange(min(window_size, len(returns))),
+                                                       returns[-window_size:])
+            if len(returns) >= window_size and slope < 0.01:
+                epsilon *= 0.95
+        window_mean = np.mean(returns[-window_size:])
+        window_std = np.std(returns[-window_size:])
+        if len(returns) >= window_size and window_mean >= 498 and window_std <= 2 and len(episode) >= 500:
             logging.info('Converged.')
             training = False
 
         if 'liveplot' in locals():
-            liveplot.update({'return': len(episode), 'mean_return': mean_return, 'epsilon': epsilon,
-                             'time_per_episode': (time.time() - time_episode_start),
-                             'state_actions_explored': np.count_nonzero(n)})
-            if training_episode_i % 100 == 0 or (
+            log = {'return': len(episode), '100_returns_mean': window_mean, '100_returns_std': window_std,
+                   'epsilon': epsilon, 'state_actions_visited': np.count_nonzero(n), 'slope': slope}
+            liveplot.update(log)
+            if training_episode_i % window_size == 0 or (
                     args.episodes is not None and training_episode_i == args.episodes - 1) or not training:
                 liveplot.draw()
 
@@ -59,15 +66,6 @@ def main(args):
     # Stop exploring during evaluation.
     for evaluation_episode_i in range(100):
         generate_episode(env, pi, 0.0, args.render_each and env.episode and env.episode % args.render_each == 0)
-
-
-def current_epsilon(args, episode_i):
-    epsilon = args.epsilon
-    if args.episodes is not None and args.epsilon_final is not None:
-        progress = episode_i / args.episodes
-        epsilon = (1 - progress) * args.epsilon + progress * args.epsilon_final
-    epsilon *= math.pow(args.epsilon_decay, episode_i)
-    return epsilon
 
 
 def generate_episode(env, pi, epsilon=0.0, render=False):
@@ -106,14 +104,12 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--episodes", default=1000, type=int, help="Training episodes.")
+    parser.add_argument("--episodes", default=2000, type=int, help="Training episodes.")
     parser.add_argument("--render_each", default=None, type=int, help="Render some episodes.")
     parser.add_argument("--epsilon", default=1.0, type=float, help="Exploration factor.")
-    parser.add_argument("--epsilon_final", default=None, type=float, help="Final exploration factor.")
-    parser.add_argument("--epsilon_decay", default=0.99, type=float, help="")
     parser.add_argument("--gamma", default=1.0, type=float, help="Discounting factor.")
-    # Gamma smaller than 1 may diminish the effect of fixed episode length, that may cause lower score for states far from the initial.
-    # --render_each=20
+    # Gamma smaller than 1 may diminish the effect of fixed episode length
+    # (lower score for states far from the initial).
     args = parser.parse_args()
 
     main(args)

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import logging
+import sys
 import time
 
 import cart_pole_evaluator
@@ -9,14 +10,38 @@ import scipy.stats
 
 
 def main(args):
+    # Create the environment
+    env = cart_pole_evaluator.environment()
+
+    try:
+        with open(args.model) as pi_file:
+            from numpy import array
+            pi = eval(pi_file.read())
+    except FileNotFoundError:
+        pi = train_pi(args, env)
+        with open(args.model, 'w') as pi_file:
+            # https://stackoverflow.com/a/57891767/4054250
+            options = np.get_printoptions()
+            np.set_printoptions(threshold=sys.maxsize)
+            pi_file.write(repr(pi))
+            np.set_printoptions(**options)
+
+    # Perform last 100 evaluation episodes
+    start_evaluate = True
+
+    # Run 100 episodes for evaluation.
+    # Stop exploring during evaluation.
+    for evaluation_episode_i in range(100):
+        generate_episode(env, pi, 0.0, args.render_each and env.episode and env.episode % args.render_each == 0)
+
+
+def train_pi(args, env):
     try:
         from livelossplot import PlotLosses
         liveplot = PlotLosses()
     except ModuleNotFoundError:
         pass
 
-    # Create the environment
-    env = cart_pole_evaluator.environment()
     pi = np.zeros(env.states, dtype=np.int)
     q = np.zeros((env.states, env.actions), dtype=np.float)
     n = np.zeros((env.states, env.actions), dtype=np.uint)
@@ -59,13 +84,7 @@ def main(args):
 
         training_episode_i += 1
 
-    # Perform last 100 evaluation episodes
-    start_evaluate = True
-
-    # Run 100 episodes for evaluation.
-    # Stop exploring during evaluation.
-    for evaluation_episode_i in range(100):
-        generate_episode(env, pi, 0.0, args.render_each and env.episode and env.episode % args.render_each == 0)
+    return pi
 
 
 def generate_episode(env, pi, epsilon=0.0, render=False):
@@ -104,6 +123,7 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser()
+    parser.add_argument("--model", default="monte_carlo_pi.py", help="Model Python file")
     parser.add_argument("--episodes", default=2000, type=int, help="Training episodes.")
     parser.add_argument("--render_each", default=None, type=int, help="Render some episodes.")
     parser.add_argument("--epsilon", default=1.0, type=float, help="Exploration factor.")

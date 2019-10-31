@@ -30,12 +30,10 @@ def main(args):
                 np.set_printoptions(**options)
                 logging.info(f'Model saved into "{args.output}".')
 
-
-def evaluate_pi(env, pi, render_each):
     # Perform last 100 evaluation episodes
     # Stop exploring during evaluation.
     for evaluation_episode_i in range(100):
-        generate_episode(env, pi, 0.0, render_each and env.episode and env.episode % render_each == 0, True)
+        generate_episode(env, pi, 0.0, args.render_each and env.episode and env.episode % args.render_each == 0, True)
 
 
 def train_pi(args, env):

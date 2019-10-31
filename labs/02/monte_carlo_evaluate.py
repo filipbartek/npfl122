@@ -4,7 +4,7 @@ import numpy as np
 
 
 def generate_episode(env, pi, epsilon=0.0, render=False):
-    state, done = env.reset(), False
+    state, done = env.reset(True), False
     # There are 500 steps in each episode. Consider optimizing by preallocating.
     episode = []
     while not done:
@@ -40,9 +40,6 @@ if __name__ == "__main__":
         pi = eval(pi_file.read())
 
     # Perform last 100 evaluation episodes
-    start_evaluate = True
-
-    # Run 100 episodes for evaluation.
     # Stop exploring during evaluation.
     for evaluation_episode_i in range(100):
         generate_episode(env, pi, 0.0, args.render_each and env.episode and env.episode % args.render_each == 0)

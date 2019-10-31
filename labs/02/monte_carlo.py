@@ -31,12 +31,9 @@ def main(args):
 
 def evaluate_pi(env, pi, render_each):
     # Perform last 100 evaluation episodes
-    start_evaluate = True
-
-    # Run 100 episodes for evaluation.
     # Stop exploring during evaluation.
     for evaluation_episode_i in range(100):
-        generate_episode(env, pi, 0.0, render_each and env.episode and env.episode % render_each == 0)
+        generate_episode(env, pi, 0.0, render_each and env.episode and env.episode % render_each == 0, True)
 
 
 def train_pi(args, env):
@@ -91,8 +88,8 @@ def train_pi(args, env):
     return pi
 
 
-def generate_episode(env, pi, epsilon=0.0, render=False):
-    state, done = env.reset(), False
+def generate_episode(env, pi, epsilon=0.0, render=False, start_evaluate=False):
+    state, done = env.reset(start_evaluate), False
     # There are 500 steps in each episode. Consider optimizing by preallocating.
     episode = []
     while not done:

@@ -76,8 +76,12 @@ def train_pi(args, env):
             training = False
 
         if 'liveplot' in locals():
-            log = {'return': len(episode), '100_returns_mean': window_mean, '100_returns_std': window_std,
-                   'epsilon': epsilon, 'state_actions_visited': np.count_nonzero(n), 'slope': slope}
+            log = {'return': len(episode),
+                   'epsilon': epsilon,
+                   'state-actions visited': np.count_nonzero(n),
+                   f'{window_size}-episode return mean': window_mean,
+                   f'{window_size}-episode return std': window_std,
+                   f'{window_size}-episode return trend': slope}
             liveplot.update(log)
             if training_episode_i % window_size == 0 or (
                     args.episodes is not None and training_episode_i == args.episodes - 1) or not training:

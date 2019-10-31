@@ -14,19 +14,21 @@ def main(args):
     env = cart_pole_evaluator.environment()
 
     try:
-        with open(args.model) as pi_file:
+        with open(args.input) as pi_file:
             from numpy import array
             pi = eval(pi_file.read())
+            logging.info(f'Model loaded from "{args.input}".')
     except FileNotFoundError:
+        logging.info(f'Could not load model from "{args.input}". Training a new model.')
         pi = train_pi(args, env)
-        with open(args.model, 'w') as pi_file:
-            # https://stackoverflow.com/a/57891767/4054250
-            options = np.get_printoptions()
-            np.set_printoptions(threshold=sys.maxsize)
-            pi_file.write(repr(pi))
-            np.set_printoptions(**options)
-
-    evaluate_pi(env, pi, args.render_each)
+        if args.output is not None:
+            with open(args.output, 'w') as pi_file:
+                # https://stackoverflow.com/a/57891767/4054250
+                options = np.get_printoptions()
+                np.set_printoptions(threshold=sys.maxsize)
+                pi_file.write(repr(pi))
+                np.set_printoptions(**options)
+                logging.info(f'Model saved into "{args.output}".')
 
 
 def evaluate_pi(env, pi, render_each):
@@ -124,7 +126,8 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model", default="monte_carlo_pi.py", help="Model Python file")
+    parser.add_argument("--input", "-i", default="monte_carlo_pi.py", help="Input model Python file")
+    parser.add_argument("--output", "-o", default=None, help="Output model Python file")
     parser.add_argument("--episodes", default=2000, type=int, help="Training episodes.")
     parser.add_argument("--render_each", default=None, type=int, help="Render some episodes.")
     parser.add_argument("--epsilon", default=1.0, type=float, help="Exploration factor.")

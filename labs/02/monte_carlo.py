@@ -60,7 +60,7 @@ def train_pi(args, env):
         time_episode_start = time.time()
 
         episode = generate_episode(env, pi, epsilon,
-                                   args.render_each and training_episode_i % args.render_each == 0)
+                                   args.render_each and env.episode and env.episode % args.render_each == 0)
         improve_policy(pi, q, n, episode, args.gamma)
 
         returns.append(len(episode))

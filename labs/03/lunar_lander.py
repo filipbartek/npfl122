@@ -32,9 +32,7 @@ if __name__ == "__main__":
     # TODO: Implement a suitable RL algorithm.
     #
     # The overall structure of the code follows.
-    training = True
-    while training:
-
+    while args.episodes is None or env.episode < args.episodes:
         # To generate expert trajectory, you can use
         state, trajectory = env.expert_trajectory()
 

@@ -112,12 +112,16 @@ def main(args):
 
         episode_average_rewards[episode] = current_episode_total_reward / current_episode_trials
 
-        if 't' in locals():
+        try:
             t.set_postfix({"mean": episode_average_rewards[:episode + 1].mean(), "std": episode_average_rewards[:episode + 1].std()})
             t.update()
+        except UnboundLocalError:
+            pass
 
-    if 't' in locals():
+    try:
         t.close()
+    except UnboundLocalError:
+        pass
 
     # For every episode, compute its average reward (a single number),
     # obtaining `args.episodes` values. Then return the final score as

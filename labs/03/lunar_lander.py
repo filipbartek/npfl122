@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+
+# Team members:
+# [Filip Bartek](https://recodex.mff.cuni.cz/app/user/9d1ef2af-eb87-11e9-9ce9-00505601122b)
+
 import numpy as np
 
 import lunar_lander_evaluator

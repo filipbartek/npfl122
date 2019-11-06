@@ -17,7 +17,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--episodes", default=None, type=int, help="Training episodes.")
     parser.add_argument("--render_each", default=0, type=int, help="Render some episodes.")
-
     parser.add_argument("--alpha", default=None, type=float, help="Learning rate.")
     parser.add_argument("--alpha_final", default=None, type=float, help="Final learning rate.")
     parser.add_argument("--epsilon", default=None, type=float, help="Exploration factor.")

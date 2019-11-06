@@ -33,6 +33,7 @@ if __name__ == "__main__":
     # TODO: Implement a suitable RL algorithm.
     #
     # The overall structure of the code follows.
+    training = True
     while training:
 
         # To generate expert trajectory, you can use
@@ -43,7 +44,7 @@ if __name__ == "__main__":
         while not done:
             if args.render_each and env.episode and env.episode % args.render_each == 0:
                 env.render()
-
+            action = 0
             next_state, reward, done, _ = env.step(action)
 
     # Perform last 100 evaluation episodes

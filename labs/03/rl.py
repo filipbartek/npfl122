@@ -3,7 +3,25 @@
 import numpy as np
 
 
-def perform(env, train=True, evaluate=False, q=None, epsilon=0.0, alpha=0.1, gamma=1.0, episodes=None,
+def perform_episode(env, q, train=True, evaluate=False, epsilon=0.0, alpha=0.1, gamma=1.0, render_each=None):
+    state, done = env.reset(evaluate), False
+    episode_reward = 0
+    while not done:
+        if render_each and env.episode and env.episode % render_each == 0:
+            env.render()
+        if np.random.random_sample() < epsilon:
+            action = np.random.randint(env.actions)
+        else:
+            action = np.argmax(q[state, :])
+        next_state, reward, done, _ = env.step(action)
+        if train:
+            q[state, action] += alpha * (reward + gamma * np.max(q[next_state, :]) - q[state, action])
+        state = next_state
+        episode_reward += reward
+    return episode_reward
+
+
+def perform(env, q=None, train=True, evaluate=False, epsilon=0.0, alpha=0.1, gamma=1.0, episodes=None,
             render_each=None, stats_plot_each=None, window_size=100):
     if stats_plot_each is not None:
         try:
@@ -17,20 +35,7 @@ def perform(env, train=True, evaluate=False, q=None, epsilon=0.0, alpha=0.1, gam
     episode_rewards = []
     try:
         while episodes is None or env.episode < episodes:
-            state, done = env.reset(evaluate), False
-            episode_reward = 0
-            while not done:
-                if render_each and env.episode and env.episode % render_each == 0:
-                    env.render()
-                if np.random.random_sample() < epsilon:
-                    action = np.random.randint(env.actions)
-                else:
-                    action = np.argmax(q[state, :])
-                next_state, reward, done, _ = env.step(action)
-                if train:
-                    q[state, action] += alpha * (reward + gamma * np.max(q[next_state, :]) - q[state, action])
-                state = next_state
-                episode_reward += reward
+            episode_reward = perform_episode(env, q, train, evaluate, epsilon, alpha, gamma, render_each)
             episode_rewards.append(episode_reward)
             try:
                 liveplot.update(

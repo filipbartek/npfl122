@@ -21,22 +21,50 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--episodes", default=None, type=int, help="Training episodes.")
-    parser.add_argument("--render_each", default=0, type=int, help="Render some episodes.")
-    parser.add_argument("--alpha", default=0.1, type=float, help="Learning rate.")
-    parser.add_argument("--epsilon", default=0.1, type=float, help="Exploration factor.")
+    parser.add_argument("--render_each", default=None, type=int, help="Render some episodes.")
+    parser.add_argument("--alpha", default=0.5, type=float, help="Learning rate.")
+    parser.add_argument("--epsilon", default=1.0, type=float, help="Exploration factor.")
     parser.add_argument("--gamma", default=1.0, type=float, help="Discounting factor.")
     parser.add_argument("--input", "-i")
     parser.add_argument("--output", "-o")
     parser.add_argument("--format", default="py", choices=["py", "npy"])
     parser.add_argument("--stats_plot_each", type=int)
+    parser.add_argument("--expert_trajectories", default=0, type=int,
+                        help="Number of expert trajectories to learn from.")
+    parser.add_argument("--steps", default=1, type=int, help="Number of steps for n-step learning.")
     args = parser.parse_args()
 
     q = None
     if args.input is not None:
-        q = rl.load(args.input, format=args.format)
+        try:
+            q = rl.load(args.input, format=args.format)
+        except FileNotFoundError:
+            pass
 
     learner = rl.Learner(lunar_lander_evaluator.environment(), q=q, epsilon=args.epsilon, alpha=args.alpha,
-                         gamma=args.gamma, render_each=args.render_each)
+                         gamma=args.gamma, steps=args.steps, render_each=args.render_each)
+
+    logging.info('Beginning learning from expert trajectories.')
+    try:
+        import tqdm
+
+        t = tqdm.tqdm(total=args.expert_trajectories, unit="trajectory")
+    except ModuleNotFoundError:
+        pass
+    try:
+        for _ in range(args.expert_trajectories):
+            learner.learn_from_trajectory()
+            try:
+                t.update()
+            except UnboundLocalError:
+                pass
+    finally:
+        try:
+            t.close()
+        except UnboundLocalError:
+            pass
+        if args.output is not None:
+            rl.save(args.output, learner.q, format=args.format)
 
     logging.info('Beginning training.')
     try:

@@ -18,24 +18,6 @@ class Learner:
         self.gamma = gamma
         self.render_each = render_each
 
-    def perform_episode(self, train=True, evaluate=False):
-        state, done = self.env.reset(evaluate), False
-        episode_reward = 0
-        while not done:
-            if self.render_each and self.env.episode and self.env.episode % self.render_each == 0:
-                self.env.render()
-            if np.random.random_sample() < self.epsilon:
-                action = np.random.randint(self.env.actions)
-            else:
-                action = np.argmax(self.q[state, :])
-            next_state, reward, done, _ = self.env.step(action)
-            if train:
-                self.q[state, action] += self.alpha * (
-                        reward + self.gamma * np.max(self.q[next_state, :]) - self.q[state, action])
-            state = next_state
-            episode_reward += reward
-        return episode_reward
-
     def perform(self, train=True, evaluate=False, episodes=None, stats_plot_each=None, window_size=100):
         if stats_plot_each is not None:
             try:
@@ -66,6 +48,24 @@ class Learner:
             except UnboundLocalError:
                 pass
         return episode_rewards
+
+    def perform_episode(self, train=True, evaluate=False):
+        state, done = self.env.reset(evaluate), False
+        episode_reward = 0
+        while not done:
+            if self.render_each and self.env.episode and self.env.episode % self.render_each == 0:
+                self.env.render()
+            if np.random.random_sample() < self.epsilon:
+                action = np.random.randint(self.env.actions)
+            else:
+                action = np.argmax(self.q[state, :])
+            next_state, reward, done, _ = self.env.step(action)
+            if train:
+                self.q[state, action] += self.alpha * (
+                        reward + self.gamma * np.max(self.q[next_state, :]) - self.q[state, action])
+            state = next_state
+            episode_reward += reward
+        return episode_reward
 
 
 def save(file, model, format='py'):

@@ -31,21 +31,20 @@ if __name__ == "__main__":
     parser.add_argument("--stats_plot_each", type=int)
     args = parser.parse_args()
 
-    # Create the environment
-    env = lunar_lander_evaluator.environment()
-
+    q = None
     if args.input is not None:
         q = rl.load(args.input, format=args.format)
-    else:
-        q = np.zeros((env.states, env.actions), dtype=np.float)
+
+    learner = rl.Learner(lunar_lander_evaluator.environment(), q=q, epsilon=args.epsilon, alpha=args.alpha,
+                         gamma=args.gamma, render_each=args.render_each)
 
     logging.info('Beginning training.')
     try:
-        rl.perform(env, q=q, train=True, evaluate=False, episodes=args.episodes, epsilon=args.epsilon, alpha=args.alpha,
-                   gamma=args.gamma, render_each=args.render_each, stats_plot_each=args.stats_plot_each)
+        learner.perform(train=True, evaluate=False, episodes=args.episodes, stats_plot_each=args.stats_plot_each)
     finally:
         if args.output is not None:
-            rl.save(args.output, q, format=args.format)
+            rl.save(args.output, learner.q, format=args.format)
 
     logging.info('Beginning evaluation.')
-    rl.perform(env, train=False, evaluate=True, episodes=100, gamma=args.gamma, render_each=args.render_each)
+    learner.epsilon = 0.0
+    learner.perform(train=False, evaluate=True, episodes=100)

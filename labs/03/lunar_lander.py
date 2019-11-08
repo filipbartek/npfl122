@@ -26,7 +26,7 @@ if __name__ == "__main__":
     parser.add_argument("--alpha", default=0.5, type=float, help="Learning rate.")
     parser.add_argument("--epsilon", default=1.0, type=float, help="Exploration factor.")
     parser.add_argument("--gamma", default=1.0, type=float, help="Discounting factor.")
-    parser.add_argument("--input", "-i")
+    parser.add_argument("--input", "-i", default="lunar_lander_q.py")
     parser.add_argument("--output", "-o")
     parser.add_argument("--expert_trajectories", default=0, type=int,
                         help="Number of expert trajectories to learn from.")

@@ -45,6 +45,7 @@ if __name__ == "__main__":
         try:
             q = rl.load(args.input)
         except FileNotFoundError:
+            logging.info(f'Input model "{args.input}" not found.')
             pass
 
     learner = rl.Learner(lunar_lander_evaluator.environment(), q=q, epsilon=args.epsilon, alpha=args.alpha,

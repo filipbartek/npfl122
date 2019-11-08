@@ -21,7 +21,8 @@ class Learner:
         self.steps = steps
         self.window_state_actions = np.zeros((self.steps, 2), dtype=np.uint)
         self.window_rewards = np.zeros(self.steps, dtype=np.float)
-        self.window_multipliers = [np.power(self.gamma, np.roll(np.arange(self.steps), i)) for i in range(self.steps)]
+        self.window_multipliers = np.array(
+            [np.power(self.gamma, np.roll(np.arange(self.steps), i)) for i in range(self.steps)], dtype=np.float)
         self.gamma_to_steps = np.power(self.gamma, self.steps)
         self.render_each = render_each
 

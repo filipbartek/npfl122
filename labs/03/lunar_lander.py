@@ -31,7 +31,6 @@ if __name__ == "__main__":
     parser.add_argument("--gamma", default=1.0, type=float, help="Discounting factor.")
     parser.add_argument("--input", "-i")
     parser.add_argument("--output", "-o")
-    parser.add_argument("--format", default="py", choices=["py", "npy"])
     parser.add_argument("--stats_plot_each", type=int)
     parser.add_argument("--expert_trajectories", default=0, type=int,
                         help="Number of expert trajectories to learn from.")
@@ -44,7 +43,7 @@ if __name__ == "__main__":
     q = None
     if args.input is not None:
         try:
-            q = rl.load(args.input, format=args.format)
+            q = rl.load(args.input)
         except FileNotFoundError:
             pass
 
@@ -58,7 +57,7 @@ if __name__ == "__main__":
     finally:
         summary_writer.close()
         if args.output is not None:
-            rl.save(args.output, learner.q, format=args.format)
+            rl.save(args.output, learner.q)
 
     logging.info('Beginning training.')
     summary_writer = tf.summary.create_file_writer(os.path.join(log_dir, 'training'))
@@ -67,7 +66,7 @@ if __name__ == "__main__":
     finally:
         summary_writer.close()
         if args.output is not None:
-            rl.save(args.output, learner.q, format=args.format)
+            rl.save(args.output, learner.q)
 
     logging.info('Beginning evaluation.')
     learner.epsilon = 0.0

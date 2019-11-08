@@ -2,6 +2,7 @@
 
 import itertools
 import logging
+import os.path
 import sys
 
 import numpy as np
@@ -138,31 +139,41 @@ class Learner:
         return episode_reward, step_done
 
 
-def save(file, model, format='py'):
-    success = False
-    if format == 'py':
-        with open(file, 'w') as f:
-            # https://stackoverflow.com/a/57891767/4054250
-            options = np.get_printoptions()
-            np.set_printoptions(threshold=sys.maxsize)
-            f.write(repr(model))
-            np.set_printoptions(**options)
-            success = True
-    if format == 'npy':
-        np.save(file, model)
-        success = True
-    assert success
+def save(file, model):
+    get_model_format(file)['save'](file, model)
     logging.info(f'Model saved into "{file}".')
 
 
-def load(file, format='py'):
-    model = None
-    if format == 'py':
-        with open(file) as f:
-            from numpy import array
-            model = eval(f.read())
-    if format == 'npy':
-        model = np.load(file)
-    assert model is not None
+def load(file):
+    model = get_model_format(file)['load'](file)
     logging.info(f'Model loaded from "{file}".')
     return model
+
+
+def get_model_format(file):
+    try:
+        return model_formats[os.path.splitext(file)[1]]
+    except KeyError as e:
+        raise RuntimeError(f'Unrecognized model format: {file}') from e
+
+
+def save_py(file, model):
+    with open(file, 'w') as f:
+        # https://stackoverflow.com/a/57891767/4054250
+        options = np.get_printoptions()
+        np.set_printoptions(threshold=sys.maxsize)
+        f.write(repr(model))
+        np.set_printoptions(**options)
+
+
+def load_py(file):
+    with open(file) as f:
+        # noinspection PyUnresolvedReferences
+        from numpy import array
+        return eval(f.read())
+
+
+model_formats = {
+    '.py': {'save': save_py, 'load': load_py},
+    '.npy': {'save': np.save, 'load': np.load}
+}

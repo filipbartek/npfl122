@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 
 # Team members:
-# [Filip Bartek](https://recodex.mff.cuni.cz/app/user/9d1ef2af-eb87-11e9-9ce9-00505601122b)
+# Filip Bartek       | https://recodex.mff.cuni.cz/app/user/9d1ef2af-eb87-11e9-9ce9-00505601122b
+# Bartosz Piotrowski | https://recodex.mff.cuni.cz/app/user/953e620d-1bf0-11e8-9de3-00505601122b
 
 import datetime
 import logging

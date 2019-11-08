@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import datetime
 import itertools
 import logging
 import os.path
@@ -11,7 +12,7 @@ from scipy.stats import linregress
 
 
 class Learner:
-    def __init__(self, env, q=None, epsilon=0.0, alpha=0.1, gamma=1.0, steps=1, render_each=None):
+    def __init__(self, env, q=None, epsilon=0.0, alpha=0.1, gamma=1.0, steps=1, render_each=None, log_dir=None):
         self.env = env
         if q is None:
             self.q = np.zeros((env.states, env.actions), dtype=np.float)
@@ -27,28 +28,35 @@ class Learner:
             [np.power(self.gamma, np.roll(np.arange(self.steps), i)) for i in range(self.steps)], dtype=np.float)
         self.gamma_to_steps = np.power(self.gamma, self.steps)
         self.render_each = render_each
+        if log_dir is None:
+            self.log_dir = os.path.join('logs', datetime.datetime.now().strftime("%Y%m%d-%H%M%S"))
+        else:
+            self.log_dir = log_dir
 
-    def learn_from_trajectories(self, n, summary_writer=None):
+    def learn_from_trajectories(self, n):
+        if n <= 0:
+            return
         try:
             import tqdm
 
             t = tqdm.tqdm(total=n, unit="trajectory")
         except ModuleNotFoundError:
             pass
+        summary_writer = tf.summary.create_file_writer(os.path.join(self.log_dir, 'expert'))
         try:
             for episode in range(n):
                 reward, episode_length = self.learn_from_trajectory()
-                if summary_writer is not None:
-                    with summary_writer.as_default():
-                        tf.summary.scalar('reward', reward, step=episode)
-                        tf.summary.scalar('episode length', episode_length, step=episode)
-                        tf.summary.scalar('non-zero state-actions', np.count_nonzero(self.q), step=episode,
-                                          description='Number of state-actions with non-zero value estimate')
+                with summary_writer.as_default():
+                    tf.summary.scalar('reward', reward, step=episode)
+                    tf.summary.scalar('episode length', episode_length, step=episode)
+                    tf.summary.scalar('non-zero state-actions', np.count_nonzero(self.q), step=episode,
+                                      description='Number of state-actions with non-zero value estimate')
                 try:
                     t.update()
                 except NameError:
                     pass
         finally:
+            summary_writer.close()
             try:
                 t.close()
             except NameError:
@@ -68,20 +76,27 @@ class Learner:
             self.q[state, action] += self.alpha * (g - self.q[state, action])
         return g, len(trajectory)
 
-    def perform(self, train=True, evaluate=False, episodes=None, window_size=100, summary_writer=None):
+    def perform(self, train=True, evaluate=False, episodes=None, window_size=100):
+        if episodes and episodes <= 0:
+            return
+        if train:
+            sequence_name = 'training'
+        else:
+            sequence_name = 'evaluation'
+        summary_writer = tf.summary.create_file_writer(os.path.join(self.log_dir, sequence_name))
         episode_rewards = []
         trend = None
-        for episode in itertools.count():
-            if episodes is not None and episode >= episodes:
-                break
-            episode_reward, episode_length = self.perform_episode(train, evaluate)
-            episode_rewards.append(episode_reward)
-            if len(episode_rewards) >= window_size:
-                trend, _, _, _, _ = linregress(np.arange(min(window_size, len(episode_rewards))),
-                                               episode_rewards[-window_size:])
-                if trend < 0.01:
-                    self.epsilon *= 0.99
-            if summary_writer is not None:
+        try:
+            for episode in itertools.count():
+                if episodes is not None and episode >= episodes:
+                    break
+                episode_reward, episode_length = self.perform_episode(train, evaluate)
+                episode_rewards.append(episode_reward)
+                if len(episode_rewards) >= window_size:
+                    trend, _, _, _, _ = linregress(np.arange(min(window_size, len(episode_rewards))),
+                                                   episode_rewards[-window_size:])
+                    if trend < 0.01:
+                        self.epsilon *= 0.99
                 with summary_writer.as_default():
                     tf.summary.scalar('reward', episode_reward, step=episode)
                     tf.summary.scalar('episode length', episode_length, step=episode)
@@ -97,7 +112,9 @@ class Learner:
                         assert trend is not None
                         tf.summary.scalar('reward trend', trend, step=episode,
                                           description=f'Reward trend across {window_size} latest episodes')
-        assert episodes is None or len(episode_rewards) == episodes
+            assert episodes is None or len(episode_rewards) == episodes
+        finally:
+            summary_writer.close()
         return episode_rewards
 
     def perform_episode(self, train=True, evaluate=False):

@@ -51,31 +51,23 @@ if __name__ == "__main__":
             args.train = True
 
     learner = rl.Learner(lunar_lander_evaluator.environment(), q=q, epsilon=args.epsilon, alpha=args.alpha,
-                         gamma=args.gamma, steps=args.steps, render_each=args.render_each)
+                         gamma=args.gamma, steps=args.steps, render_each=args.render_each, log_dir=log_dir)
 
     if args.train:
         logging.info('Beginning learning from expert trajectories.')
-        summary_writer = tf.summary.create_file_writer(os.path.join(log_dir, 'expert_trajectories'))
         try:
-            learner.learn_from_trajectories(args.expert_trajectories, summary_writer=summary_writer)
+            learner.learn_from_trajectories(args.expert_trajectories)
         finally:
-            summary_writer.close()
             if args.output is not None:
                 rl.save(args.output, learner.q)
 
         logging.info('Beginning training.')
-        summary_writer = tf.summary.create_file_writer(os.path.join(log_dir, 'training'))
         try:
-            learner.perform(train=True, evaluate=False, episodes=args.episodes, summary_writer=summary_writer)
+            learner.perform(train=True, evaluate=False, episodes=args.episodes)
         finally:
-            summary_writer.close()
             if args.output is not None:
                 rl.save(args.output, learner.q)
 
     logging.info('Beginning evaluation.')
     learner.epsilon = 0.0
-    summary_writer = tf.summary.create_file_writer(os.path.join(log_dir, 'evaluation'))
-    try:
-        learner.perform(train=False, evaluate=True, episodes=100, summary_writer=summary_writer)
-    finally:
-        summary_writer.close()
+    learner.perform(train=False, evaluate=True, episodes=100)

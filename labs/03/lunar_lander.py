@@ -56,12 +56,12 @@ if __name__ == "__main__":
             learner.learn_from_trajectory()
             try:
                 t.update()
-            except UnboundLocalError:
+            except NameError:
                 pass
     finally:
         try:
             t.close()
-        except UnboundLocalError:
+        except NameError:
             pass
         if args.output is not None:
             rl.save(args.output, learner.q, format=args.format)

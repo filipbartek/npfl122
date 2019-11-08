@@ -12,7 +12,7 @@ set -euo pipefail
 echo Git commit: "$(git rev-parse --verify HEAD)"
 
 if [ -n "${MODULESHOME-}" ]; then module load Python; fi
-VENV=${VENV:-$PWD}
+VENV=${VENV:-$PWD/venv}
 . "$VENV/bin/activate"
 
 python -O "$@"

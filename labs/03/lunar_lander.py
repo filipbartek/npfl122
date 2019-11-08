@@ -28,7 +28,6 @@ if __name__ == "__main__":
     parser.add_argument("--gamma", default=1.0, type=float, help="Discounting factor.")
     parser.add_argument("--input", "-i")
     parser.add_argument("--output", "-o")
-    parser.add_argument("--stats_plot_each", type=int)
     parser.add_argument("--expert_trajectories", default=0, type=int,
                         help="Number of expert trajectories to learn from.")
     parser.add_argument("--steps", default=1, type=int, help="Number of steps for n-step learning.")

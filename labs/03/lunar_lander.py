@@ -16,7 +16,6 @@ import rl
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
-    current_time = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
     np.random.seed(42)
 
     import argparse
@@ -33,10 +32,15 @@ if __name__ == "__main__":
                         help="Number of expert trajectories to learn from.")
     parser.add_argument("--steps", default=1, type=int, help="Number of steps for n-step learning.")
     parser.add_argument("--log_dir", default="logs")
+    parser.add_argument("--run_name", default=None)
     parser.add_argument("--train", action="store_true")
     args = parser.parse_args()
 
-    log_dir = os.path.join(args.log_dir, current_time)
+    if args.run_name is None:
+        run_name = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+    else:
+        run_name = args.run_name
+    log_dir = os.path.join(args.log_dir, run_name)
 
     q = None
     if args.input is not None:

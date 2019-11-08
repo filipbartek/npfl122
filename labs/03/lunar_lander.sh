@@ -15,6 +15,9 @@ COMMAND=(
   "$@"
 )
 
-if [ -n "${SLURM_JOB_ID-}" ]; then COMMAND+=(--output "slurm-$SLURM_JOB_ID-model.npy"); fi
+if [ -n "${SLURM_JOB_ID-}" ]; then
+  COMMAND+=(--output "slurm-$SLURM_JOB_ID-model.npy")
+  COMMAND+=(--run_name "slurm-$SLURM_JOB_ID-$SLURM_JOB_NAME")
+fi
 
 ../run.sh "${COMMAND[@]}"

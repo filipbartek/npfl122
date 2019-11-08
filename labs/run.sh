@@ -15,4 +15,6 @@ if [ -n "${MODULESHOME-}" ]; then module load Python; fi
 VENV=${VENV:-$PWD/venv}
 . "$VENV/bin/activate"
 
+echo "$@"
+
 python -O "$@"

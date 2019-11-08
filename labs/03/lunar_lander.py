@@ -16,11 +16,8 @@ import rl
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     current_time = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-
-    # Fix random seed
     np.random.seed(42)
 
-    # Parse arguments
     import argparse
 
     parser = argparse.ArgumentParser()

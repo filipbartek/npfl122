@@ -87,6 +87,7 @@ class Learner:
         for step in itertools.count():
             if done and step_done is None:
                 step_done = step
+                step = max(step, self.steps - 1)
             if step_done is not None and step >= step_done + self.steps - 1:
                 break
             if not done:

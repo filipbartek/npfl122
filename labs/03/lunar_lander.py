@@ -32,6 +32,7 @@ if __name__ == "__main__":
                         help="Number of expert trajectories to learn from.")
     parser.add_argument("--steps", default=1, type=int, help="Number of steps for n-step learning.")
     parser.add_argument("--log_dir", default="logs")
+    parser.add_argument("--train", action="store_true")
     args = parser.parse_args()
 
     log_dir = os.path.join(args.log_dir, current_time)
@@ -42,28 +43,29 @@ if __name__ == "__main__":
             q = rl.load(args.input)
         except FileNotFoundError:
             logging.info(f'Input model "{args.input}" not found.')
-            pass
+            args.train = True
 
     learner = rl.Learner(lunar_lander_evaluator.environment(), q=q, epsilon=args.epsilon, alpha=args.alpha,
                          gamma=args.gamma, steps=args.steps, render_each=args.render_each)
 
-    logging.info('Beginning learning from expert trajectories.')
-    summary_writer = tf.summary.create_file_writer(os.path.join(log_dir, 'expert_trajectories'))
-    try:
-        learner.learn_from_trajectories(args.expert_trajectories, summary_writer=summary_writer)
-    finally:
-        summary_writer.close()
-        if args.output is not None:
-            rl.save(args.output, learner.q)
+    if args.train:
+        logging.info('Beginning learning from expert trajectories.')
+        summary_writer = tf.summary.create_file_writer(os.path.join(log_dir, 'expert_trajectories'))
+        try:
+            learner.learn_from_trajectories(args.expert_trajectories, summary_writer=summary_writer)
+        finally:
+            summary_writer.close()
+            if args.output is not None:
+                rl.save(args.output, learner.q)
 
-    logging.info('Beginning training.')
-    summary_writer = tf.summary.create_file_writer(os.path.join(log_dir, 'training'))
-    try:
-        learner.perform(train=True, evaluate=False, episodes=args.episodes, summary_writer=summary_writer)
-    finally:
-        summary_writer.close()
-        if args.output is not None:
-            rl.save(args.output, learner.q)
+        logging.info('Beginning training.')
+        summary_writer = tf.summary.create_file_writer(os.path.join(log_dir, 'training'))
+        try:
+            learner.perform(train=True, evaluate=False, episodes=args.episodes, summary_writer=summary_writer)
+        finally:
+            summary_writer.close()
+            if args.output is not None:
+                rl.save(args.output, learner.q)
 
     logging.info('Beginning evaluation.')
     learner.epsilon = 0.0

@@ -9,7 +9,6 @@ import logging
 import os.path
 
 import numpy as np
-import tensorflow as tf
 
 import lunar_lander_evaluator
 import rl

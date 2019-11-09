@@ -51,6 +51,8 @@ class Learner:
                     tf.summary.scalar('episode length', episode_length, step=episode)
                     tf.summary.scalar('non-zero state-actions', np.count_nonzero(self.q), step=episode,
                                       description='Number of state-actions with non-zero value estimate')
+                    tf.summary.scalar('alpha', self.alpha, step=episode)
+                    tf.summary.scalar('gamma', self.gamma, step=episode)
                 try:
                     t.update()
                 except NameError:
@@ -101,6 +103,9 @@ class Learner:
                     tf.summary.scalar('reward', episode_reward, step=episode)
                     tf.summary.scalar('episode length', episode_length, step=episode)
                     tf.summary.scalar('epsilon', self.epsilon, step=episode)
+                    tf.summary.scalar('alpha', self.alpha, step=episode)
+                    tf.summary.scalar('gamma', self.gamma, step=episode)
+                    tf.summary.scalar('steps', self.steps, step=episode)
                     if train:
                         tf.summary.scalar('non-zero state-actions', np.count_nonzero(self.q), step=episode,
                                           description='Number of state-actions with non-zero value estimate')

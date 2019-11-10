@@ -33,6 +33,8 @@ if __name__ == "__main__":
     parser.add_argument("--log_dir", default="logs")
     parser.add_argument("--run_name", default=None)
     parser.add_argument("--train", action="store_true")
+    parser.add_argument("--no_evaluate", action="store_true")
+    parser.add_argument("--validation_period", default=1000, type=int)
     args = parser.parse_args()
 
     if args.run_name is None:
@@ -49,24 +51,18 @@ if __name__ == "__main__":
             logging.info(f'Input model "{args.input}" not found.')
             args.train = True
 
-    learner = rl.Learner(lunar_lander_evaluator.environment(), q=q, epsilon=args.epsilon, alpha=args.alpha,
-                         gamma=args.gamma, steps=args.steps, render_each=args.render_each, log_dir=log_dir)
+    learner = rl.Learner(lunar_lander_evaluator, q=q, epsilon=args.epsilon, alpha=args.alpha,
+                         gamma=args.gamma, steps=args.steps, render_each=args.render_each, log_dir=log_dir,
+                         validation_period=args.validation_period)
 
     if args.train:
-        logging.info('Beginning learning from expert trajectories.')
         try:
-            learner.learn_from_trajectories(args.expert_trajectories)
+            learner.train(episodes=args.episodes, expert_trajectories=args.expert_trajectories)
         finally:
             if args.output is not None:
-                rl.save(args.output, learner.q)
+                logging.info(f'Saving the best model validated so far. Score: {learner.best_score}')
+                rl.save(args.output, learner.best_q)
 
-        logging.info('Beginning training.')
-        try:
-            learner.perform(train=True, evaluate=False, episodes=args.episodes)
-        finally:
-            if args.output is not None:
-                rl.save(args.output, learner.q)
-
-    logging.info('Beginning evaluation.')
-    learner.epsilon = 0.0
-    learner.perform(train=False, evaluate=True, episodes=100)
+    if not args.no_evaluate:
+        logging.info('Beginning evaluation.')
+        learner.validate(evaluate=True, episodes=100)

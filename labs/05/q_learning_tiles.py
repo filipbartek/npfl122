@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+
 import numpy as np
 
 import mountain_car_evaluator
@@ -9,10 +10,10 @@ if __name__ == "__main__":
 
     # Parse arguments
     import argparse
+
     parser = argparse.ArgumentParser()
     parser.add_argument("--episodes", default=None, type=int, help="Training episodes.")
     parser.add_argument("--render_each", default=None, type=int, help="Render some episodes.")
-
     parser.add_argument("--alpha", default=None, type=float, help="Learning rate.")
     parser.add_argument("--alpha_final", default=None, type=float, help="Final learning rate.")
     parser.add_argument("--epsilon", default=None, type=float, help="Exploration factor.")
@@ -51,9 +52,11 @@ if __name__ == "__main__":
 
         if not evaluating:
             if args.epsilon_final:
-                epsilon = np.exp(np.interp(env.episode + 1, [0, args.episodes], [np.log(args.epsilon), np.log(args.epsilon_final)]))
+                epsilon = np.exp(
+                    np.interp(env.episode + 1, [0, args.episodes], [np.log(args.epsilon), np.log(args.epsilon_final)]))
             if args.alpha_final:
-                alpha = np.exp(np.interp(env.episode + 1, [0, args.episodes], [np.log(args.alpha), np.log(args.alpha_final)])) / args.tiles
+                alpha = np.exp(np.interp(env.episode + 1, [0, args.episodes],
+                                         [np.log(args.alpha), np.log(args.alpha_final)])) / args.tiles
 
     # Perform the final evaluation episodes
     while True:

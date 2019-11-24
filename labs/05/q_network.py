@@ -6,9 +6,9 @@ import os
 
 import numpy as np
 import tensorflow as tf
-from keras.layers import Dense
-from keras.models import Sequential, load_model
-from keras.optimizers import RMSprop
+from tensorflow.keras.layers import Dense
+from tensorflow.keras.models import Sequential, load_model
+from tensorflow.keras.optimizers import RMSprop
 
 import cart_pole_evaluator
 

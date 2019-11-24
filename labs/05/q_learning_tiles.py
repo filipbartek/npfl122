@@ -9,7 +9,6 @@ from concurrent.futures import ThreadPoolExecutor
 
 import numpy as np
 import tensorflow as tf
-from scipy.stats import linregress
 from tqdm import tqdm
 
 import mountain_car_evaluator
@@ -43,8 +42,7 @@ def perform_batch_isolated(evaluator, tiles, W=None, alpha=0.0, epsilon=0.0, gam
     return rewards, W, alpha, epsilon, gamma
 
 
-def perform_episode(env, W, alpha, epsilon, gamma, evaluating=False):
-    # Perform a training episode
+def perform_episode(env, W, alpha=0.0, epsilon=0.0, gamma=1.0, evaluating=False):
     episode_reward = 0
     state, done = env.reset(evaluating), False
     state_x = feature_vector(state, env)
@@ -53,7 +51,7 @@ def perform_episode(env, W, alpha, epsilon, gamma, evaluating=False):
             env.render()
 
         # Choose `action` according to epsilon-greedy strategy
-        if np.random.random_sample() < epsilon:
+        if epsilon > 0.0 and np.random.random_sample() < epsilon:
             action = np.random.randint(env.actions)
         else:
             action = np.argmax(action_preferences(state_x, env, W))
@@ -63,8 +61,9 @@ def perform_episode(env, W, alpha, epsilon, gamma, evaluating=False):
         episode_reward += reward
 
         # Update W values
-        g = reward + gamma * np.max(action_preferences(next_state_x, env, W))
-        W[:, action] += alpha * (g - np.max(action_preferences(state_x, env, W))) * state_x
+        if alpha != 0.0:
+            g = reward + gamma * np.max(action_preferences(next_state_x, env, W))
+            W[:, action] += alpha * (g - np.max(action_preferences(state_x, env, W))) * state_x
 
         state_x = next_state_x
     return episode_reward
@@ -129,7 +128,21 @@ def train_mt(args, W, summary_writer_train):
     return W
 
 
-def train_st(args, W, summary_writer_train):
+def validate(evaluator, tiles, W, episodes, summary_writer, step, alpha, epsilon, gamma):
+    validation_rewards, _, _, _, _ = perform_batch_isolated(evaluator, tiles, W, episodes=episodes)
+    assert summary_writer is not None
+    with summary_writer_validate.as_default():
+        tf.summary.scalar('reward', np.mean(validation_rewards), step=step)
+        tf.summary.scalar('alpha', alpha, step=step)
+        tf.summary.scalar('epsilon', epsilon, step=step)
+        tf.summary.scalar('gamma', gamma, step=step)
+        tf.summary.scalar('W.nonzero', np.count_nonzero(W), step=step)
+        tf.summary.scalar('W.nonzero.ratio', np.count_nonzero(W) / W.size, step=step)
+        tf.summary.histogram('W', W, step=step)
+        tf.summary.histogram(f'reward[{episodes}]', validation_rewards, step=step)
+
+
+def train_st(args, W, summary_writer_train, summary_writer_validate, validate_each=None, validation_episodes=100):
     assert args.episodes is not None
     env = mountain_car_evaluator.environment(tiles=args.tiles)
     if W is None:
@@ -139,40 +152,35 @@ def train_st(args, W, summary_writer_train):
     gamma = args.gamma
     window_size = 100
     episode_rewards = deque(maxlen=window_size)
-    trend = None
-    for _ in tqdm(range(args.episodes), unit='episode'):
-        if args.episodes is not None and env.episode >= args.episodes:
-            break
+    try:
+        for _ in tqdm(range(args.episodes), unit='episode'):
+            if validate_each is not None and env.episode % validate_each == 0:
+                validate(mountain_car_evaluator, args.tiles, W, validation_episodes, summary_writer_validate,
+                         env.episode, alpha, epsilon, gamma)
+            if args.epsilon_final is not None:
+                epsilon = np.exp(
+                    np.interp(env.episode, [0, args.episodes], [np.log(args.epsilon), np.log(args.epsilon_final)]))
+            if args.alpha_final is not None:
+                alpha = np.exp(np.interp(env.episode, [0, args.episodes],
+                                         [np.log(args.alpha), np.log(args.alpha_final)])) / args.tiles
 
-        if args.epsilon_final is not None:
-            epsilon = np.exp(
-                np.interp(env.episode, [0, args.episodes], [np.log(args.epsilon), np.log(args.epsilon_final)]))
-        if args.alpha_final is not None:
-            alpha = np.exp(np.interp(env.episode, [0, args.episodes],
-                                     [np.log(args.alpha), np.log(args.alpha_final)])) / args.tiles
+            episode_reward = perform_episode(env, W, alpha, epsilon, gamma)
+            episode_rewards.append(episode_reward)
 
-        episode_reward = perform_episode(env, W, alpha, epsilon, gamma)
-        episode_rewards.append(episode_reward)
-        if len(episode_rewards) == window_size:
-            trend, _, _, _, _ = linregress(np.arange(window_size), episode_rewards)
-            # trend <= 0: epsilon *= 0.9 (mindecay)
-            # trend = 1: epsilon *= 1
-            # trend >= 2: epsilon *= 1.1 (maxdecay)
-            # if trend < 0.01:
-            #    epsilon *= 0.95
-
-        with summary_writer_train.as_default():
-            tf.summary.scalar('reward', episode_reward, step=env.episode)
-            tf.summary.scalar('epsilon', epsilon, step=env.episode)
-            tf.summary.scalar('alpha', alpha, step=env.episode)
-            tf.summary.scalar('gamma', gamma, step=env.episode)
-            tf.summary.scalar('W.nonzero', np.count_nonzero(W), step=env.episode)
-            tf.summary.scalar('W.nonzero.ratio', np.count_nonzero(W) / W.size, step=env.episode)
-            tf.summary.histogram('W', W, step=env.episode)
-            if len(episode_rewards) >= window_size:
-                tf.summary.histogram(f'reward[{window_size}]', episode_rewards, step=env.episode)
-            if trend is not None:
-                tf.summary.scalar(f'reward[{window_size}].trend', trend, step=env.episode)
+            with summary_writer_train.as_default():
+                tf.summary.scalar('reward', episode_reward, step=env.episode)
+                tf.summary.scalar('epsilon', epsilon, step=env.episode)
+                tf.summary.scalar('alpha', alpha, step=env.episode)
+                tf.summary.scalar('gamma', gamma, step=env.episode)
+                tf.summary.scalar('W.nonzero', np.count_nonzero(W), step=env.episode)
+                tf.summary.scalar('W.nonzero.ratio', np.count_nonzero(W) / W.size, step=env.episode)
+                tf.summary.histogram('W', W, step=env.episode)
+                if len(episode_rewards) >= window_size:
+                    tf.summary.histogram(f'reward[{window_size}]', episode_rewards, step=env.episode)
+    finally:
+        if validate_each is not None:
+            validate(mountain_car_evaluator, args.tiles, W, validation_episodes, summary_writer_validate, env.episode,
+                     alpha, epsilon, gamma)
     return W
 
 
@@ -199,6 +207,8 @@ if __name__ == "__main__":
     parser.add_argument("--episodes_per_batch", default=1, type=int)
     parser.add_argument("--no_evaluation", action="store_true")
     parser.add_argument("--cpus", default=1, type=int)
+    parser.add_argument("--validate_each", default=1000, type=int)
+    parser.add_argument("--validate_episodes", default=100, type=int)
     args = parser.parse_args()
 
     try:
@@ -207,15 +217,17 @@ if __name__ == "__main__":
         W = None
     run_name = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
     summary_writer_train = tf.summary.create_file_writer(os.path.join(args.logdir, run_name, 'train'))
+    summary_writer_validate = tf.summary.create_file_writer(os.path.join(args.logdir, run_name, 'validate'))
 
     try:
         if args.cpus > 1:
             train_mt(args, W, summary_writer_train)
         else:
-            train_st(args, W, summary_writer_train)
+            train_st(args, W, summary_writer_train, summary_writer_validate, validate_each=args.validate_each,
+                     validation_episodes=args.validate_episodes)
     finally:
         assert W is not None
         save_py('q_learning_tiles_' + run_name + '.py', W)
 
     if not args.no_evaluation:
-        perform_batch_isolated(mountain_car_evaluator, args.tiles, W, gamma=args.gamma, episodes=100, evaluating=True)
+        perform_batch_isolated(mountain_car_evaluator, args.tiles, W, episodes=100, evaluating=True)

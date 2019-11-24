@@ -133,7 +133,7 @@ def train_mt(args, W, summary_writer_train):
 def validate(evaluator, tiles, W, episodes, summary_writer, step, alpha, epsilon, gamma):
     validation_rewards, _, _, _, _ = perform_batch_isolated(evaluator, tiles, W, episodes=episodes)
     assert summary_writer is not None
-    with summary_writer_validate.as_default():
+    with summary_writer.as_default():
         tf.summary.scalar('reward', np.mean(validation_rewards), step=step)
         tf.summary.scalar('alpha', alpha, step=step)
         tf.summary.scalar('epsilon', epsilon, step=step)

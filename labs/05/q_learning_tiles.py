@@ -9,7 +9,6 @@ from concurrent.futures import ThreadPoolExecutor
 
 import numpy as np
 import tensorflow as tf
-from tqdm import tqdm
 
 import mountain_car_evaluator
 
@@ -87,6 +86,9 @@ def train_mt(args, W, summary_writer_train):
     alpha = args.alpha / args.tiles
     epsilon = args.epsilon
     gamma = args.gamma
+
+    from tqdm import tqdm
+
     with ThreadPoolExecutor(max_workers=args.cpus) as executor, tqdm(total=args.episodes, unit='episode') as t:
         futures = set()
         episodes_submitted = 0
@@ -153,6 +155,8 @@ def train_st(args, W, summary_writer_train, summary_writer_validate, validate_ea
     window_size = 100
     episode_rewards = deque(maxlen=window_size)
     try:
+        from tqdm import tqdm
+
         for _ in tqdm(range(args.episodes), unit='episode'):
             if validate_each is not None and env.episode % validate_each == 0:
                 validate(mountain_car_evaluator, args.tiles, W, validation_episodes, summary_writer_validate,
@@ -194,7 +198,7 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--episodes", default=10000, type=int, help="Training episodes.")
+    parser.add_argument("--episodes", default=0, type=int, help="Training episodes.")
     parser.add_argument("--render_each", default=None, type=int, help="Render some episodes.")
     parser.add_argument("--alpha", default=0.1, type=float, help="Learning rate.")
     parser.add_argument("--alpha_final", default=0.1, type=float, help="Final learning rate.")
@@ -219,15 +223,16 @@ if __name__ == "__main__":
     summary_writer_train = tf.summary.create_file_writer(os.path.join(args.logdir, run_name, 'train'))
     summary_writer_validate = tf.summary.create_file_writer(os.path.join(args.logdir, run_name, 'validate'))
 
-    try:
-        if args.cpus > 1:
-            train_mt(args, W, summary_writer_train)
-        else:
-            train_st(args, W, summary_writer_train, summary_writer_validate, validate_each=args.validate_each,
-                     validation_episodes=args.validate_episodes)
-    finally:
-        assert W is not None
-        save_py('q_learning_tiles_' + run_name + '.py', W)
+    if args.episodes > 0:
+        try:
+            if args.cpus > 1:
+                train_mt(args, W, summary_writer_train)
+            else:
+                train_st(args, W, summary_writer_train, summary_writer_validate, validate_each=args.validate_each,
+                         validation_episodes=args.validate_episodes)
+        finally:
+            assert W is not None
+            save_py('q_learning_tiles_' + run_name + '.py', W)
 
     if not args.no_evaluation:
         perform_batch_isolated(mountain_car_evaluator, args.tiles, W, episodes=100, evaluating=True)

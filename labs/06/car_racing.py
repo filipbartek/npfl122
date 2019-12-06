@@ -28,11 +28,11 @@ if __name__ == "__main__":
     tf.config.threading.set_intra_op_parallelism_threads(args.threads)
 
     # Create the environment
-    env = car_racing_evaluator.environment()
+    env = car_racing_evaluator.environment(args.frame_skip)
 
     # TODO: Implement a variation to Deep Q Network algorithm.
-
-    # Perform a training episode
+    #
+    # Example: How to perform an episode with "always gas" agent.
     state, done = env.reset(), False
     while not done:
         if args.render_each and (env.episode + 1) % args.render_each == 0:
@@ -40,3 +40,10 @@ if __name__ == "__main__":
 
         action = [0, 1, 0]
         next_state, reward, done, _ = env.step(action)
+
+    # After training (or loading the model), you should run the evaluation:
+    while True:
+        state, done = env.reset(True), False
+        while not done:
+            # Choose greedy action
+            state, reward, done, _ = env.step(action)

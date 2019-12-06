@@ -27,6 +27,7 @@ class GymEnvironment:
         self._episode_return = 0
         self._episode_returns = []
         self._episode_ended = True
+        self._workers = None
 
     def _maybe_discretize(self, observation):
         if self._separators is not None:
@@ -105,6 +106,9 @@ class GymEnvironment:
         return len(self._episode_returns)
 
     def reset(self, start_evaluate=False):
+        if self._evaluating_from is not None and not self._episode_ended:
+            raise RuntimeError("Cannot reset a running episode after `start_evaluate=True`")
+
         if start_evaluate and self._evaluating_from is None:
             self._evaluating_from = self.episode
 
@@ -123,15 +127,66 @@ class GymEnvironment:
             self._episode_returns.append(self._episode_return)
 
             if self.episode % 10 == 0:
-                print("Episode {}, mean 100-episode return {}".format(
-                    self.episode, np.mean(self._episode_returns[-100:])), file=sys.stderr)
+                print("Episode {}, mean 100-episode return {:.2f} +-{:.2f}".format(
+                    self.episode, np.mean(self._episode_returns[-100:]),
+                    np.std(self._episode_returns[-100:])), file=sys.stderr)
             if self._evaluating_from is not None and self.episode >= self._evaluating_from + 100:
-                print("The mean 100-episode return after evaluation {}".format(np.mean(self._episode_returns[-100:])))
+                print("The mean 100-episode return after evaluation {:.2f} +-{:.2f}".format(
+                    np.mean(self._episode_returns[-100:]), np.std(self._episode_returns[-100:]), file=sys.std))
                 sys.exit(0)
 
             self._episode_return = 0
 
         return self._maybe_discretize(observation), reward, done, info
+
+    def parallel_init(self, environments):
+        import atexit
+        import multiprocessing
+
+        if self._workers is not None:
+            raise RuntimeError("The parallel_init method already called")
+
+        self._workers = []
+        for i in range(environments):
+            connection, connection_worker = multiprocessing.Pipe()
+            worker = multiprocessing.Process(target=GymEnvironment._parallel_worker, args=(self, self._env.spec.id, 43 + i, connection_worker))
+            worker.start()
+            self._workers.append((connection, worker))
+
+        import atexit
+        atexit.register(lambda: [worker.terminate() for _, worker in self._workers])
+
+        states = []
+        for connection, _ in self._workers:
+            states.append(connection.recv())
+
+        return states
+
+    def _parallel_worker(parent, env, seed, connection):
+        env = gym.make(env)
+        env.seed(seed)
+
+        connection.send(parent._maybe_discretize(env.reset()))
+        try:
+            while True:
+                action = connection.recv()
+                state, reward, done, info = env.step(action)
+                if done: state = env.reset()
+                connection.send((parent._maybe_discretize(state), reward, done, info))
+        except KeyboardInterrupt:
+            pass
+
+    def parallel_step(self, actions):
+        if self._workers is None:
+            raise RuntimeError("The parallel_init method was not called before parallel_step")
+
+        for action, (connection, _) in zip(actions, self._workers):
+            connection.send(action)
+
+        results = []
+        for connection, _ in self._workers:
+            results.append(connection.recv())
+        return results
 
     def render(self):
         self._env.render()

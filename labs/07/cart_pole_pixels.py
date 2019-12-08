@@ -92,9 +92,6 @@ if __name__ == "__main__":
         logging.info('Training...')
         try:
             for batch_i in range(args.episodes // args.batch_size):
-                if batch_i % 100 == 0:
-                    network.pi.save(f'{task_name}_{run_name}_{batch_i}_pi.h5')
-                    network.v.save(f'{task_name}_{run_name}_{batch_i}_v.h5')
                 batch_states, batch_actions, batch_returns = [], [], []
                 for _ in range(args.batch_size):
                     # Perform episode

@@ -2,6 +2,7 @@
 
 import logging
 import os
+from collections import deque
 from datetime import datetime
 
 import numpy as np
@@ -110,10 +111,13 @@ if __name__ == "__main__":
     network = Network(env, args, name=task_name)
 
     if not network.loaded or args.retrain:
+        returns = deque(maxlen=100)
+        best_returns_mean = None
         logging.info('Training...')
         try:
             for batch_i in range(args.episodes // args.batch_size):
                 batch_states, batch_actions, batch_returns = [], [], []
+                batch_return = 0
                 for batch_episode_i in range(args.batch_size):
                     tf.summary.experimental.set_step(batch_i * args.batch_size + batch_episode_i)
                     states, actions, rewards = [], [], []
@@ -129,8 +133,17 @@ if __name__ == "__main__":
                         actions.append(action)
                         rewards.append(reward)
                         state = next_state
+                    cur_return = np.sum(rewards)
+                    returns.append(cur_return)
+                    mean_return = np.mean(returns)
+                    if len(returns) >= 100 and (best_returns_mean is None or mean_return > best_returns_mean):
+                        logging.info(f'New best: {mean_return}')
+                        best_returns_mean = mean_return
+                        network.pi.save(f'{task_name}_{run_name}_best_pi.h5')
+                        network.v.save(f'{task_name}_{run_name}_best_v.h5')
                     with writer_train.as_default():
-                        tf.summary.scalar('return', np.sum(rewards))
+                        tf.summary.scalar('return', cur_return)
+                        tf.summary.scalar('return.mean', mean_return)
                     batch_states.extend(states)
                     batch_actions.extend(actions)
                     batch_returns.extend(

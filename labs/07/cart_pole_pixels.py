@@ -116,7 +116,6 @@ if __name__ == "__main__":
                 batch_states, batch_actions, batch_returns = [], [], []
                 for batch_episode_i in range(args.batch_size):
                     tf.summary.experimental.set_step(batch_i * args.batch_size + batch_episode_i)
-                    # Perform episode
                     states, actions, rewards = [], [], []
                     state, done = env.reset(), False
                     while not done:

@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
+
 import numpy as np
 import tensorflow as tf
 
 import cart_pole_pixels_evaluator
+
 
 class Network:
     def __init__(self, env, args):
@@ -17,7 +19,8 @@ class Network:
         raise NotImplementedError()
 
     def train(self, states, actions, returns):
-        states, actions, returns = np.array(states, np.float32), np.array(actions, np.int32), np.array(returns, np.float32)
+        states, actions, returns = np.array(states, np.float32), np.array(actions, np.int32), np.array(returns,
+                                                                                                       np.float32)
         # TODO
         raise NotImplementedError()
 
@@ -30,6 +33,7 @@ class Network:
 if __name__ == "__main__":
     # Parse arguments
     import argparse
+
     parser = argparse.ArgumentParser()
     parser.add_argument("--batch_size", default=None, type=int, help="Number of episodes to train on.")
     parser.add_argument("--episodes", default=None, type=int, help="Training episodes.")

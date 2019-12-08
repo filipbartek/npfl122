@@ -144,6 +144,7 @@ if __name__ == "__main__":
             network.v.save(f'{task_name}_{run_name}_v.h5')
 
     # Final evaluation
+    logging.info('Evaluating...')
     while True:
         state, done = env.reset(True), False
         while not done:

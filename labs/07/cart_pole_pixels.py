@@ -75,7 +75,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--batch_size", default=1, type=int, help="Number of episodes to train on.")
-    parser.add_argument("--episodes", default=200, type=int, help="Training episodes.")
+    parser.add_argument("--episodes", default=1000, type=int, help="Training episodes.")
     parser.add_argument("--gamma", default=0.9, type=float, help="Discounting factor.")
     parser.add_argument("--learning_rate", default=0.001, type=float, help="Learning rate.")
     parser.add_argument("--render_each", default=0, type=int, help="Render some episodes.")

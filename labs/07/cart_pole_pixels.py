@@ -118,8 +118,7 @@ if __name__ == "__main__":
                     batch_actions.extend(actions)
                     batch_returns.extend(
                         np.sum((rewards[t] * np.power(args.gamma, t - start) for t in range(start, len(rewards)))) for
-                        start
-                        in range(len(rewards)))
+                        start in range(len(rewards)))
                     assert len(batch_states) == len(batch_actions) == len(batch_returns)
 
                 network.train(batch_states, batch_actions, batch_returns)

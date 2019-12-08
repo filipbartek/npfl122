@@ -120,18 +120,13 @@ if __name__ == "__main__":
                     while not done:
                         if args.render_each and env.episode > 0 and env.episode % args.render_each == 0:
                             env.render()
-
                         probabilities = network.predict([state])[0]
-
                         assert len(probabilities) == env.actions
                         action = np.random.choice(env.actions, p=probabilities)
-
                         next_state, reward, done, _ = env.step(action)
-
                         states.append(state)
                         actions.append(action)
                         rewards.append(reward)
-
                         state = next_state
                     with writer_train.as_default():
                         tf.summary.scalar('return', np.sum(rewards))

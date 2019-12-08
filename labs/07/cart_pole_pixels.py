@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import logging
+import os
 from datetime import datetime
 
 import numpy as np
@@ -43,13 +44,29 @@ class Network:
     def train(self, states, actions, returns):
         states, actions, returns = np.array(states, np.float32), np.array(actions, np.int32), np.array(returns,
                                                                                                        np.float32)
+        tf.summary.histogram('actions', actions)
+        tf.summary.histogram('returns', returns)
         baseline = self.v.predict_on_batch(states)
-        self.pi.train_on_batch(states, actions, sample_weight=returns.flatten() - baseline.flatten())
-        self.v.train_on_batch(states, returns)
-        # TODO: Publish stats in TensorBoard.
+        assert baseline.shape == (len(returns), 1)
+        tf.summary.histogram('baseline', baseline)
+        returns_normalized = returns - baseline[:, 0]
+        tf.summary.histogram('returns_normalized', returns_normalized)
+        tf.summary.scalar('returns.mean', returns.mean())
+        metrics_values = self.pi.train_on_batch(states, actions, sample_weight=returns_normalized)
+        for name, value in logs(self.pi.metrics_names, metrics_values).items():
+            tf.summary.scalar(f'pi.{name}', value)
+        metrics_values = self.v.train_on_batch(states, returns)
+        for name, value in logs(self.v.metrics_names, metrics_values).items():
+            tf.summary.scalar(f'v.{name}', value)
 
     def predict(self, states):
         return self.pi.predict_on_batch(np.array(states, np.float32))
+
+
+def logs(metrics_names, metrics_values):
+    if type(metrics_values) is not list:
+        metrics_values = [metrics_values]
+    return {name: value for name, value in zip(metrics_names, metrics_values)}
 
 
 if __name__ == "__main__":
@@ -84,6 +101,8 @@ if __name__ == "__main__":
 
     task_name = 'cart_pole_pixels'
     run_name = datetime.now().strftime("%Y%m%d-%H%M%S")
+    log_dir = os.path.join('logs', run_name)
+    writer_train = tf.summary.create_file_writer(os.path.join(log_dir, 'train'))
 
     # Construct the network
     network = Network(env, args, name=task_name)
@@ -93,7 +112,8 @@ if __name__ == "__main__":
         try:
             for batch_i in range(args.episodes // args.batch_size):
                 batch_states, batch_actions, batch_returns = [], [], []
-                for _ in range(args.batch_size):
+                for batch_episode_i in range(args.batch_size):
+                    tf.summary.experimental.set_step(batch_i * args.batch_size + batch_episode_i)
                     # Perform episode
                     states, actions, rewards = [], [], []
                     state, done = env.reset(), False
@@ -113,15 +133,16 @@ if __name__ == "__main__":
                         rewards.append(reward)
 
                         state = next_state
-
+                    with writer_train.as_default():
+                        tf.summary.scalar('return', np.sum(rewards))
                     batch_states.extend(states)
                     batch_actions.extend(actions)
                     batch_returns.extend(
                         np.sum((rewards[t] * np.power(args.gamma, t - start) for t in range(start, len(rewards)))) for
                         start in range(len(rewards)))
                     assert len(batch_states) == len(batch_actions) == len(batch_returns)
-
-                network.train(batch_states, batch_actions, batch_returns)
+                with writer_train.as_default():
+                    network.train(batch_states, batch_actions, batch_returns)
         finally:
             network.pi.save(f'{task_name}_{run_name}_pi.h5')
             network.v.save(f'{task_name}_{run_name}_v.h5')

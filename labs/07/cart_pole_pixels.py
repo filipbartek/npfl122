@@ -91,6 +91,8 @@ if __name__ == "__main__":
     tf.config.threading.set_inter_op_parallelism_threads(args.threads)
     tf.config.threading.set_intra_op_parallelism_threads(args.threads)
 
+    logging.info(tf.config.experimental.list_physical_devices('GPU'))
+
     # Create the environment
     env = cart_pole_pixels_evaluator.environment()
 

@@ -32,13 +32,12 @@ class Network:
                            metrics=['accuracy'], experimental_run_tf_function=False)
 
     def base_model(self):
-        # https://keras.io/examples/mnist_cnn/
+        # https://www.cs.toronto.edu/~vmnih/docs/dqn.pdf
         model = Sequential()
-        model.add(Conv2D(32, (8, 8), (4, 4), activation='relu', input_shape=env.state_shape))
-        model.add(Conv2D(64, (4, 4), (2, 2), activation='relu'))
-        model.add(Conv2D(64, (3, 3), activation='relu'))
+        model.add(Conv2D(16, (8, 8), (4, 4), activation='relu', input_shape=env.state_shape))
+        model.add(Conv2D(32, (4, 4), (2, 2), activation='relu'))
         model.add(Flatten())
-        model.add(Dense(512, activation='relu'))
+        model.add(Dense(256, activation='relu'))
         return model
 
     def train(self, states, actions, returns):

@@ -19,7 +19,9 @@ class Network:
         self.loaded = False
         try:
             self.pi = load_model(f'{name}_pi.h5')
+            self.pi.optimizer.lr = args.learning_rate
             self.v = load_model(f'{name}_v.h5')
+            self.v.optimizer.lr = args.learning_rate
             self.loaded = True
             logging.info('Model loaded.')
         except OSError:

@@ -72,6 +72,20 @@ def logs(metrics_names, metrics_values):
     return {name: value for name, value in zip(metrics_names, metrics_values)}
 
 
+def validate(env, network, episodes=100, evaluation=False):
+    returns = []
+    for _ in range(episodes):
+        state, done = env.reset(evaluation), False
+        episode_return = 0
+        while not done:
+            probabilities = network.predict([state])[0]
+            action = np.argmax(probabilities)
+            state, reward, done, _ = env.step(action)
+            episode_return += reward
+        returns.append(episode_return)
+    return returns
+
+
 if __name__ == "__main__":
     # Parse arguments
     import argparse
@@ -96,8 +110,8 @@ if __name__ == "__main__":
 
     logging.info(tf.config.experimental.list_physical_devices('GPU'))
 
-    # Create the environment
-    env = cart_pole_pixels_evaluator.environment()
+    def new_environment():
+        return cart_pole_pixels_evaluator.environment()
 
     try:
         import cart_pole_pixels_model
@@ -109,7 +123,7 @@ if __name__ == "__main__":
     log_dir = os.path.join('logs', run_name)
     writer_train = tf.summary.create_file_writer(os.path.join(log_dir, 'train'))
 
-    # Construct the network
+    env = new_environment()
     network = Network(env, args, name=task_name)
 
     if not network.loaded or args.retrain:
@@ -160,9 +174,4 @@ if __name__ == "__main__":
 
     # Final evaluation
     logging.info('Evaluating...')
-    while True:
-        state, done = env.reset(True), False
-        while not done:
-            probabilities = network.predict([state])[0]
-            action = np.argmax(probabilities)
-            state, reward, done, _ = env.step(action)
+    validate(new_environment(), network, episodes=100, evaluation=True)

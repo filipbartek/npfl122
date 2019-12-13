@@ -12,6 +12,7 @@ class Network:
         # Use independent networks for both of them, each with
         # `args.hidden_layer` neurons in one hidden layer,
         # and train them using Adam with given `args.learning_rate`.
+        pass
 
     def train(self, states, actions, returns):
         states, actions, returns = np.array(states, np.float32), np.array(actions, np.int32), np.array(returns, np.float32)
@@ -68,6 +69,7 @@ if __name__ == "__main__":
             # - estimating returns by reward + (0 if done else args.gamma * next_state_value)
 
             # TODO: Train network using current states, chosen actions and estimated returns
+            pass
 
         # Periodic evaluation
         returns = []

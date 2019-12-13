@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
+
 import numpy as np
 import tensorflow as tf
 
 import gym_evaluator
+
 
 class Network:
     def __init__(self, env, args):
@@ -15,7 +17,8 @@ class Network:
         pass
 
     def train(self, states, actions, returns):
-        states, actions, returns = np.array(states, np.float32), np.array(actions, np.int32), np.array(returns, np.float32)
+        states, actions, returns = np.array(states, np.float32), np.array(actions, np.int32), np.array(returns,
+                                                                                                       np.float32)
         # TODO: Train the policy network using policy gradient theorem
         # and the value network using MSE.
 
@@ -27,9 +30,11 @@ class Network:
         states = np.array(states, np.float32)
         return self._value.predict_on_batch(states)[:, 0]
 
+
 if __name__ == "__main__":
     # Parse arguments
     import argparse
+
     parser = argparse.ArgumentParser()
     parser.add_argument("--env", default="CartPole-v1", type=str, help="Environment.")
     parser.add_argument("--evaluate_each", default=100, type=int, help="Evaluate each number of batches.")

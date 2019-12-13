@@ -143,6 +143,8 @@ if __name__ == "__main__":
                             env.render()
                         probabilities = network.predict([state])[0]
                         assert len(probabilities) == env.actions
+                        # Normalize to compensate for instabilities
+                        probabilities = np.asarray(probabilities) / np.sum(probabilities)
                         action = np.random.choice(env.actions, p=probabilities)
                         next_state, reward, done, _ = env.step(action)
                         states.append(state)

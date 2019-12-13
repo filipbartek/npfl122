@@ -48,13 +48,13 @@ class Network:
         states, actions, returns = np.array(states, np.float32), np.array(actions, np.int32), np.array(returns,
                                                                                                        np.float32)
         tf.summary.histogram('actions', actions)
-        tf.summary.histogram('returns', returns)
+        tf.summary.histogram('train_returns', returns)
+        tf.summary.scalar('train_returns.mean', returns.mean())
         baseline = self.v.predict_on_batch(states)
         assert baseline.shape == (len(returns), 1)
         tf.summary.histogram('baseline', baseline)
         returns_normalized = returns - baseline[:, 0]
-        tf.summary.histogram('returns_normalized', returns_normalized)
-        tf.summary.scalar('returns.mean', returns.mean())
+        tf.summary.histogram('train_returns_normalized', returns_normalized)
         metrics_values = self.pi.train_on_batch(states, actions, sample_weight=returns_normalized)
         for name, value in logs(self.pi.metrics_names, metrics_values).items():
             tf.summary.scalar(f'pi.{name}', value)
@@ -160,8 +160,8 @@ if __name__ == "__main__":
                         network.pi.save(f'{task_name}_{run_name}_best_pi.h5')
                         network.v.save(f'{task_name}_{run_name}_best_v.h5')
                     with writer_train.as_default():
-                        tf.summary.scalar('return', cur_return)
-                        tf.summary.scalar('return.mean', mean_return)
+                        tf.summary.scalar('actual_return', cur_return)
+                        tf.summary.scalar('actual_return.mean', mean_return)
                     batch_states.extend(states)
                     batch_actions.extend(actions)
                     batch_returns.extend(

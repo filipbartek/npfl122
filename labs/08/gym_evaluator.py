@@ -132,7 +132,7 @@ class GymEnvironment:
                     np.std(self._episode_returns[-100:])), file=sys.stderr)
             if self._evaluating_from is not None and self.episode >= self._evaluating_from + 100:
                 print("The mean 100-episode return after evaluation {:.2f} +-{:.2f}".format(
-                    np.mean(self._episode_returns[-100:]), np.std(self._episode_returns[-100:]), file=sys.std))
+                    np.mean(self._episode_returns[-100:]), np.std(self._episode_returns[-100:]), file=sys.stderr))
                 sys.exit(0)
 
             self._episode_return = 0
@@ -146,12 +146,13 @@ class GymEnvironment:
         if self._workers is not None:
             raise RuntimeError("The parallel_init method already called")
 
-        self._workers = []
+        workers = []
         for i in range(environments):
             connection, connection_worker = multiprocessing.Pipe()
             worker = multiprocessing.Process(target=GymEnvironment._parallel_worker, args=(self, self._env.spec.id, 43 + i, connection_worker))
             worker.start()
-            self._workers.append((connection, worker))
+            workers.append((connection, worker))
+        self._workers = workers
 
         import atexit
         atexit.register(lambda: [worker.terminate() for _, worker in self._workers])
@@ -162,6 +163,7 @@ class GymEnvironment:
 
         return states
 
+    @staticmethod
     def _parallel_worker(parent, env, seed, connection):
         env = gym.make(env)
         env.seed(seed)

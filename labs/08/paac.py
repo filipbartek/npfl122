@@ -7,28 +7,32 @@ from datetime import datetime
 import numpy as np
 import tensorflow as tf
 from tensorflow.keras.layers import Dense
-from tensorflow.keras.models import Sequential
+from tensorflow.keras.models import Sequential, load_model
 from tensorflow.keras.optimizers import Adam
 
 import gym_evaluator
 
 
 class Network:
-    def __init__(self, env, args):
+    def __init__(self, env, args, filepath=None):
         # Similarly to reinforce, define two models:
         # - _policy, which predicts distribution over the actions
         # - _value, which predicts the value function
         # Use independent networks for both of them, each with
         # `args.hidden_layer` neurons in one hidden layer,
         # and train them using Adam with given `args.learning_rate`.
-        self._policy = self.base_model(env, args)
-        self._policy.add(Dense(env.actions, activation='softmax'))
-        self._policy.compile(optimizer=Adam(lr=args.learning_rate), loss='sparse_categorical_crossentropy',
-                             metrics=['accuracy'], experimental_run_tf_function=False)
-        self._value = self.base_model(env, args)
-        self._value.add(Dense(1))
-        self._value.compile(optimizer=Adam(lr=args.learning_rate), loss='mean_squared_error',
-                            metrics=['accuracy'], experimental_run_tf_function=False)
+        try:
+            self._policy = load_model(f'{filepath}_policy.h5')
+            self._value = load_model(f'{filepath}_value.h5')
+        except OSError:
+            self._policy = self.base_model(env, args)
+            self._policy.add(Dense(env.actions, activation='softmax'))
+            self._policy.compile(optimizer=Adam(lr=args.learning_rate), loss='sparse_categorical_crossentropy',
+                                 metrics=['accuracy'], experimental_run_tf_function=False)
+            self._value = self.base_model(env, args)
+            self._value.add(Dense(1))
+            self._value.compile(optimizer=Adam(lr=args.learning_rate), loss='mean_squared_error',
+                                metrics=['accuracy'], experimental_run_tf_function=False)
 
     @staticmethod
     def base_model(env, args):
@@ -56,6 +60,10 @@ class Network:
     def predict_values(self, states):
         states = np.array(states, np.float32)
         return self._value.predict_on_batch(states)[:, 0]
+
+    def save(self, filepath):
+        self._policy.save(f'{filepath}_policy.h5')
+        self._value.save(f'{filepath}_value.h5')
 
 
 def evaluate(env, network, episodes=100, render_each=None, final_evaluation=False):
@@ -114,48 +122,51 @@ if __name__ == "__main__":
     step = 0
 
     # Initialize parallel workers by env.parallel_init
-    states = env.parallel_init(args.workers)
-    while True:
-        # Training
-        for _ in range(args.evaluate_each):
-            tf.summary.experimental.set_step(step)
+    try:
+        states = env.parallel_init(args.workers)
+        while True:
+            # Training
+            for _ in range(args.evaluate_each):
+                tf.summary.experimental.set_step(step)
 
-            # Choose actions using network.predict_actions
-            probabilities = network.predict_actions(states)
-            assert probabilities.shape == (len(states), env.actions)
-            assert np.allclose(probabilities.sum(axis=1), 1)
-            actions = [np.random.choice(env.actions, p=p) for p in probabilities]
-            assert len(actions) == len(states)
+                # Choose actions using network.predict_actions
+                probabilities = network.predict_actions(states)
+                assert probabilities.shape == (len(states), env.actions)
+                assert np.allclose(probabilities.sum(axis=1), 1)
+                actions = [np.random.choice(env.actions, p=p) for p in probabilities]
+                assert len(actions) == len(states)
 
-            # Perform steps by env.parallel_step
-            steps = env.parallel_step(actions)
+                # Perform steps by env.parallel_step
+                steps = env.parallel_step(actions)
 
-            # Compute return estimates by
-            # - extracting next_states from steps
-            # - computing value function approximation in next_states
-            # - estimating returns by reward + (0 if done else args.gamma * next_state_value)
-            next_states, rewards, dones, _ = zip(*steps)
-            next_state_values = network.predict_values(next_states)
-            tail_returns = next_state_values * args.gamma * np.logical_not(dones)
-            returns = np.asarray(rewards) + tail_returns
+                # Compute return estimates by
+                # - extracting next_states from steps
+                # - computing value function approximation in next_states
+                # - estimating returns by reward + (0 if done else args.gamma * next_state_value)
+                next_states, rewards, dones, _ = zip(*steps)
+                next_state_values = network.predict_values(next_states)
+                tail_returns = next_state_values * args.gamma * np.logical_not(dones)
+                returns = np.asarray(rewards) + tail_returns
 
-            # Train network using current states, chosen actions and estimated returns
+                # Train network using current states, chosen actions and estimated returns
+                with writer.as_default():
+                    tf.summary.histogram('training_returns', returns)
+                    network.train(states, actions, returns)
+
+                states = next_states
+                step += 1
+            # Periodic evaluation
+            returns = evaluate(gym_evaluator.GymEnvironment(args.env), network, episodes=args.evaluate_for, render_each=args.render_each)
+            print("Step {}: Evaluation of {} episodes: {:.2f} +-{:.2f}".format(step, args.evaluate_for, np.mean(returns), np.std(returns)))
             with writer.as_default():
-                tf.summary.histogram('training_returns', returns)
-                network.train(states, actions, returns)
-
-            states = next_states
-            step += 1
-
-        # Periodic evaluation
-        returns = evaluate(env, network, episodes=args.evaluate_for, render_each=args.render_each)
-        print("Evaluation of {} episodes: {:.2f} +-{:.2f}".format(args.evaluate_for, np.mean(returns), np.std(returns)))
-        with writer.as_default():
-            tf.summary.histogram('evaluation_returns', returns)
-            tf.summary.scalar('evaluation_returns.mean', np.mean(returns))
-            tf.summary.scalar('evaluation_returns.std', np.std(returns))
-        if np.mean(returns) > 475 and np.std(returns) < 25:
-            break
+                tf.summary.histogram('evaluation_returns', returns)
+                tf.summary.scalar('evaluation_returns.mean', np.mean(returns))
+                tf.summary.scalar('evaluation_returns.std', np.std(returns))
+            if np.mean(returns) > 475 and np.std(returns) < 25:
+                break
+    finally:
+        network.save(f'paac_{run_name}')
 
     # On the end perform final evaluations with `env.reset(True)`
-    evaluate(env, network, render_each=args.render_each, final_evaluation=True)
+    logging.info('Final evaluation...')
+    evaluate(gym_evaluator.GymEnvironment(args.env), network, render_each=args.render_each, final_evaluation=True)

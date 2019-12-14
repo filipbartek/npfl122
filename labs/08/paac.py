@@ -87,13 +87,14 @@ if __name__ == "__main__":
     parser.add_argument("--render_each", default=0, type=int, help="Render some episodes.")
     parser.add_argument("--threads", default=0, type=int, help="Maximum number of threads to use.")
     parser.add_argument("--workers", default=128, type=int, help="Number of parallel workers.")
+    parser.add_argument("--seed", default=42, type=int)
     args = parser.parse_args()
 
     logging.basicConfig(level=logging.INFO)
 
     # Fix random seeds and number of threads
-    np.random.seed(42)
-    tf.random.set_seed(42)
+    np.random.seed(args.seed)
+    tf.random.set_seed(args.seed)
     tf.config.threading.set_inter_op_parallelism_threads(args.threads)
     tf.config.threading.set_intra_op_parallelism_threads(args.threads)
     tf.summary.experimental.set_step(0)

@@ -118,6 +118,14 @@ if __name__ == "__main__":
     # Create the environment
     env = gym_evaluator.GymEnvironment(args.env)
 
+    try:
+        import paac_model
+
+        assert os.path.isfile('paac_policy.h5')
+        assert os.path.isfile('paac_value.h5')
+    except ModuleNotFoundError:
+        pass
+
     # Construct the network
     network = Network(env, args)
 

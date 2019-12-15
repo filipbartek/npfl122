@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
+
 import numpy as np
 import tensorflow as tf
 
 import continuous_mountain_car_evaluator
+
 
 # This class is a bare version of tfp.distributions.Normal
 class Normal:
@@ -24,6 +26,7 @@ class Normal:
         shape = tf.concat([[n], tf.broadcast_dynamic_shape(tf.shape(self.loc), tf.shape(self.scale))], axis=0)
         sampled = tf.random.normal(shape=shape, mean=0., stddev=1., dtype=tf.float32, seed=seed)
         return sampled * self.scale + self.loc
+
 
 class Network:
     def __init__(self, env, args):
@@ -68,9 +71,11 @@ class Network:
         # - negative value of the distribution entropy (use `entropy` method of
         #   the `action_distribution`) weighted by `args.entropy_regularization`.
         # - mean square error of the `returns` and `values`
+        pass
 
     def train(self, states, actions, returns):
-        states, actions, returns = np.array(states, np.int32), np.array(actions, np.float32), np.array(returns, np.float32)
+        states, actions, returns = np.array(states, np.int32), np.array(actions, np.float32), np.array(returns,
+                                                                                                       np.float32)
         self._train(states, actions, returns)
 
     @tf.function
@@ -87,9 +92,11 @@ class Network:
         _, _, values = self._predict(states)
         return values.numpy()[:, 0]
 
+
 if __name__ == "__main__":
     # Parse arguments
     import argparse
+
     parser = argparse.ArgumentParser()
     parser.add_argument("--entropy_regularization", default=0.1, type=float, help="Entropy regularization weight.")
     parser.add_argument("--evaluate_each", default=100, type=int, help="Evaluate each number of batches.")
@@ -133,6 +140,7 @@ if __name__ == "__main__":
             # - estimating returns by reward + (0 if done else args.gamma * next_state_value)
 
             # TODO: Train network using current states, chosen actions and estimated returns
+            pass
 
         # Periodic evaluation
         returns = []

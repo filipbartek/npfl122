@@ -24,7 +24,9 @@ class Network:
         try:
             self._policy = load_model(f'{filepath}_policy.h5')
             self._value = load_model(f'{filepath}_value.h5')
+            logging.info(f'Model loaded from "{filepath}_*.h5".')
         except OSError:
+            logging.info('Model file not found. Initializing a new model.')
             self._policy = self.base_model(env, args)
             self._policy.add(Dense(env.actions, activation='softmax'))
             self._policy.compile(optimizer=Adam(lr=args.learning_rate), loss='sparse_categorical_crossentropy',

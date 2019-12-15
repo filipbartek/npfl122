@@ -14,7 +14,7 @@ import gym_evaluator
 
 
 class Network:
-    def __init__(self, env, args, filepath=None):
+    def __init__(self, env, args, filepath='paac'):
         # Similarly to reinforce, define two models:
         # - _policy, which predicts distribution over the actions
         # - _value, which predicts the value function

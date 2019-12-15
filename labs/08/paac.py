@@ -100,6 +100,8 @@ if __name__ == "__main__":
     parser.add_argument("--seed", default=42, type=int)
     args = parser.parse_args()
 
+    np.seterr(all='raise')
+
     logging.basicConfig(level=logging.INFO)
 
     # Fix random seeds and number of threads

@@ -191,8 +191,10 @@ if __name__ == "__main__":
                     states = next_states
                     step += 1
                 # Periodic evaluation
-                returns = evaluate(gym_evaluator.GymEnvironment(args.env), network, episodes=args.evaluate_for, render_each=args.render_each)
-                print("Step {}: Evaluation of {} episodes: {:.2f} +-{:.2f}".format(step, args.evaluate_for, np.mean(returns), np.std(returns)))
+                returns = evaluate(gym_evaluator.GymEnvironment(args.env), network, episodes=args.evaluate_for,
+                                   render_each=args.render_each)
+                print("Step {}: Evaluation of {} episodes: {:.2f} +-{:.2f}".format(step, args.evaluate_for,
+                                                                                   np.mean(returns), np.std(returns)))
                 with writer_evaluate.as_default():
                     tf.summary.histogram('Return', returns)
                     tf.summary.scalar('Return mean', np.mean(returns))

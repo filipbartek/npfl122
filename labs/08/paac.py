@@ -131,8 +131,8 @@ if __name__ == "__main__":
 
     step = 0
 
-    # Initialize parallel workers by env.parallel_init
     try:
+        # Initialize parallel workers by env.parallel_init
         states = env.parallel_init(args.workers)
         start_step = np.zeros(args.workers, dtype=np.uint)
         last_return = np.full(args.workers, np.nan, dtype=np.float)

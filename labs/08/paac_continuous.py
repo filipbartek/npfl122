@@ -279,6 +279,7 @@ if __name__ == "__main__":
                     tf.summary.scalar('Return mean', np.mean(returns))
                 logging.debug(f'Step {step}: evaluation: {time.time() - time_start} s')
                 time_start = time.time()
+            states = next_states
     finally:
         pass
 

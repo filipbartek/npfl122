@@ -162,17 +162,17 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--entropy_regularization", default=0.01, type=float, help="Entropy regularization weight.")
-    parser.add_argument("--evaluate_each", default=1000, type=int, help="Evaluate each number of batches.")
-    parser.add_argument("--evaluate_for", default=1, type=int, help="Evaluate for number of batches.")
+    parser.add_argument("--entropy_regularization", default=0.1, type=float, help="Entropy regularization weight.")
+    parser.add_argument("--evaluate_each", default=100, type=int, help="Evaluate each number of batches.")
+    parser.add_argument("--evaluate_for", default=10, type=int, help="Evaluate for number of batches.")
     parser.add_argument("--gamma", default=1.0, type=float, help="Discounting factor.")
     parser.add_argument("--hidden_layer", default=32, type=int, help="Size of hidden layer.")
-    parser.add_argument("--learning_rate", default=0.01, type=float, help="Learning rate.")
+    parser.add_argument("--learning_rate", default=0.001, type=float, help="Learning rate.")
     parser.add_argument("--render_each", default=0, type=int, help="Render some episodes.")
     parser.add_argument("--threads", default=0, type=int, help="Maximum number of threads to use.")
     parser.add_argument("--tiles", default=8, type=int, help="Tiles to use.")
     parser.add_argument("--workers", default=32, type=int, help="Number of parallel workers.")
-    parser.add_argument("--batch_size", default=10, type=int)
+    parser.add_argument("--batch_size", default=1, type=int)
     args = parser.parse_args()
 
     logging.basicConfig(level=logging.DEBUG)

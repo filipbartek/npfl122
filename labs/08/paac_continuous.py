@@ -101,7 +101,7 @@ class Network:
         assert tf.executing_eagerly()
         self._model.compile(self._optimizer,
                             loss={'policy': policy_loss_function(args.entropy_regularization), 'value': 'mse'},
-                            experimental_run_tf_function=True)
+                            experimental_run_tf_function=False)
 
         self.weights = env.weights
 

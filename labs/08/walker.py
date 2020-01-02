@@ -71,6 +71,8 @@ class Network:
             'target_policy': self._target_policy
         }
 
+        self._checkpoint = tf.train.Checkpoint(**self.state_models, policy_value_optimizer=self._policy_value_optimizer)
+
     @staticmethod
     def _new_value_model(env, hidden_layer_size):
         input_state = Input(env.state_shape, name='state')
@@ -174,16 +176,13 @@ class Network:
         return self._policy.predict_on_batch(np.asarray(states, dtype=np.float32))
 
     def load(self, filepath):
-        for name, model in self.state_models.items():
-            model.load_weights(os.path.join(filepath, f'{name}.ckpt'))
-        self._policy_value_optimizer = Adam.from_config(
-            pickle.load(open(os.path.join(filepath, 'policy_value_optimizer.pkl'), 'rb')))
+        self._checkpoint.restore(filepath)
+        logging.info(f'Checkpoint restored: {filepath}')
 
     def save(self, filepath):
-        for name, model in self.state_models.items():
-            model.save_weights(os.path.join(filepath, f'{name}.ckpt'))
-        pickle.dump(self._policy_value_optimizer.get_config(),
-                    open(os.path.join(filepath, 'policy_value_optimizer.pkl'), 'wb'))
+        path = self._checkpoint.write(filepath)
+        logging.info(f'Checkpoint saved: {path}')
+        return path
 
 
 def evaluate(env, network, episodes=100, render_each=None, final_evaluation=False):
@@ -297,9 +296,8 @@ if __name__ == '__main__':
         network = Network(env, args)
         network.load(args.input_network)
         logging.info('Network loaded.')
-    except (tf.errors.InvalidArgumentError, FileNotFoundError):
+    except tf.errors.NotFoundError:
         logging.info('Network loading failed gracefully.')
-        #network = Network(env, args)
 
     network_output_path = os.path.join('walker', args.env, run_name)
 

@@ -2,7 +2,6 @@
 
 import logging
 import os
-import pickle
 from collections import namedtuple, deque
 from datetime import datetime
 from itertools import count

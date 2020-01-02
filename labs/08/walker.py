@@ -8,7 +8,6 @@ from itertools import count
 
 import numpy as np
 import tensorflow as tf
-import tensorflow_probability as tfp
 from tensorflow import keras
 from tensorflow.keras.layers import Dense, Input, concatenate, Lambda
 from tensorflow.keras.models import clone_model, Model
@@ -105,6 +104,8 @@ class Network:
                     return x * scale
             else:
                 logging.debug('Rescaling actions by interpolation.')
+
+                import tensorflow_probability as tfp
 
                 def rescale(x):
                     return tfp.math.batch_interp_regular_1d_grid(x, -1, 1, action_ranges.transpose())

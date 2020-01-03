@@ -7,7 +7,6 @@ from datetime import datetime
 
 import numpy as np
 import tensorflow as tf
-from tensorflow import keras
 from tensorflow.keras.layers import Dense, Input, concatenate, Lambda
 from tensorflow.keras.models import clone_model, Model
 from tensorflow.keras.optimizers import Adam
@@ -42,7 +41,7 @@ class Network:
         self.target_tau = args.target_tau
 
         self._value = self._new_value_model(env, args.hidden_layer)
-        keras.utils.plot_model(self._value, 'walker_value.png', show_shapes=True)
+        # keras.utils.plot_model(self._value, 'walker_value.png', show_shapes=True)
         self._value.compile(optimizer=Adam(args.learning_rate), loss='mse', experimental_run_tf_function=False)
         self._target_value = clone_model_with_weights(self._value)
 
@@ -51,11 +50,11 @@ class Network:
         self._target_value_twin = clone_model_with_weights(self._value_twin)
 
         self._policy = self._new_policy_model(env, args.hidden_layer)
-        keras.utils.plot_model(self._policy, 'walker_policy.png', show_shapes=True)
+        # keras.utils.plot_model(self._policy, 'walker_policy.png', show_shapes=True)
         self._target_policy = clone_model_with_weights(self._policy)
 
         self._policy_value = self._new_policy_value_model(env)
-        keras.utils.plot_model(self._policy_value, 'walker_policy_value.png', show_shapes=True)
+        # keras.utils.plot_model(self._policy_value, 'walker_policy_value.png', show_shapes=True)
         self._policy_value_optimizer = Adam(args.learning_rate)
 
         self.state_models = {

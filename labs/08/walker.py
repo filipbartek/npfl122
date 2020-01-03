@@ -4,7 +4,6 @@ import logging
 import os
 from collections import namedtuple, deque
 from datetime import datetime
-from itertools import count
 
 import numpy as np
 import tensorflow as tf
@@ -12,7 +11,6 @@ from tensorflow import keras
 from tensorflow.keras.layers import Dense, Input, concatenate, Lambda
 from tensorflow.keras.models import clone_model, Model
 from tensorflow.keras.optimizers import Adam
-from tqdm import tqdm
 
 import gym_evaluator
 
@@ -317,107 +315,117 @@ if __name__ == '__main__':
         worker_prev_return = np.full(args.workers, np.nan, dtype=np.float)
         worker_prev_length = np.full(args.workers, np.nan, dtype=np.float)
         replay_buffer = deque(maxlen=args.replay_buffer_size)
-        with tqdm(unit='step') as t:
-            stats = dict()
-            best_evaluate_return = None
-            best_train_return = None
-            for step in range(args.steps):
-                tf.summary.experimental.set_step(step)
-                t.set_postfix(stats)
-                if args.evaluate_each and step % args.evaluate_each == 0:
-                    with writer_evaluate.as_default():
-                        returns = evaluate(new_environment(), network, episodes=args.evaluate_for,
-                                           render_each=args.render_each)
-                        if len(returns) > 0:
-                            return_mean = np.mean(returns)
-                            stats['evaluate.return'] = return_mean
-                            if best_evaluate_return is None or return_mean > best_evaluate_return:
-                                best_evaluate_return = return_mean
-                                network.save(os.path.join(network_output_path, f'evaluate_{int(return_mean)}'))
-                actions_predicted = None
-                noise_sample = None
-                if step >= args.bootstrap:
-                    actions_predicted = network.predict_actions(states)
-                    if noise is not None:
-                        noise_sample = noise.sample()
-                    else:
-                        noise_sample = np.random.normal(scale=args.noise_sigma, size=actions_predicted.shape)
-                    assert actions_predicted.shape == noise_sample.shape
-                    actions_noised = np.clip(actions_predicted + noise_sample, env.action_ranges[0],
-                                             env.action_ranges[1])
+
+        try:
+            import tqdm
+
+            t = tqdm.tqdm(total=args.steps, unit='step')
+        except ModuleNotFoundError:
+            pass
+
+        stats = dict()
+        best_evaluate_return = None
+        best_train_return = None
+        for step in range(args.steps):
+            tf.summary.experimental.set_step(step)
+            if args.evaluate_each and step % args.evaluate_each == 0:
+                with writer_evaluate.as_default():
+                    returns = evaluate(new_environment(), network, episodes=args.evaluate_for,
+                                       render_each=args.render_each)
+                    if len(returns) > 0:
+                        return_mean = np.mean(returns)
+                        stats['evaluate.return'] = return_mean
+                        if best_evaluate_return is None or return_mean > best_evaluate_return:
+                            best_evaluate_return = return_mean
+                            network.save(os.path.join(network_output_path, f'evaluate_{int(return_mean)}'))
+            actions_predicted = None
+            noise_sample = None
+            if step >= args.bootstrap:
+                actions_predicted = network.predict_actions(states)
+                if noise is not None:
+                    noise_sample = noise.sample()
                 else:
-                    actions_noised = np.random.uniform(env.action_ranges[0], env.action_ranges[1],
-                                                       tuple([args.workers] + env.action_shape))
-                assert actions_noised.shape == tuple([args.workers] + env.action_shape)
-                assert np.all(actions_noised >= env.action_ranges[0])
-                assert np.all(actions_noised <= env.action_ranges[1])
-                if args.workers > 1:
-                    steps = env.parallel_step(actions_noised)
-                else:
-                    assert actions_noised.shape[0] == 1
-                    steps = [env.step(actions_noised[0])]
-                next_states, rewards, dones, _ = zip(*steps)
-                if args.workers <= 1 and dones[0]:
-                    assert len(dones) == 1
-                    env.reset()
-                rewards_shaped = []
-                for i in range(args.workers):
-                    worker_cur_return[i] += rewards[i]
-                    if dones[i]:
-                        worker_prev_return[i] = worker_cur_return[i]
-                        worker_prev_length[i] = step - worker_episode_start_step[i]
-                        worker_cur_return[i] = 0
-                        worker_episode_start_step[i] = step
-                    # rewards_shaped.append(rewards[i] + (max(0, next_states[i][2]) * 4) ** 2)
-                    rewards_shaped.append(rewards[i])
-                replay_buffer.extend(
-                    map(lambda x: Transition(*x), zip(states, actions_noised, rewards_shaped, next_states, dones)))
+                    noise_sample = np.random.normal(scale=args.noise_sigma, size=actions_predicted.shape)
+                assert actions_predicted.shape == noise_sample.shape
+                actions_noised = np.clip(actions_predicted + noise_sample, env.action_ranges[0],
+                                         env.action_ranges[1])
+            else:
+                actions_noised = np.random.uniform(env.action_ranges[0], env.action_ranges[1],
+                                                   tuple([args.workers] + env.action_shape))
+            assert actions_noised.shape == tuple([args.workers] + env.action_shape)
+            assert np.all(actions_noised >= env.action_ranges[0])
+            assert np.all(actions_noised <= env.action_ranges[1])
+            if args.workers > 1:
+                steps = env.parallel_step(actions_noised)
+            else:
+                assert actions_noised.shape[0] == 1
+                steps = [env.step(actions_noised[0])]
+            next_states, rewards, dones, _ = zip(*steps)
+            if args.workers <= 1 and dones[0]:
+                assert len(dones) == 1
+                env.reset()
+            rewards_shaped = []
+            for i in range(args.workers):
+                worker_cur_return[i] += rewards[i]
+                if dones[i]:
+                    worker_prev_return[i] = worker_cur_return[i]
+                    worker_prev_length[i] = step - worker_episode_start_step[i]
+                    worker_cur_return[i] = 0
+                    worker_episode_start_step[i] = step
+                # rewards_shaped.append(rewards[i] + (max(0, next_states[i][2]) * 4) ** 2)
+                rewards_shaped.append(rewards[i])
+            replay_buffer.extend(
+                map(lambda x: Transition(*x), zip(states, actions_noised, rewards_shaped, next_states, dones)))
+            with writer_train.as_default():
+                tf.summary.histogram('Velocity X', [state[2] for state in states],
+                                     description='Horizontal velocity in a step')
+                if noise_sample is not None:
+                    tf.summary.scalar('Noise sample', noise_sample.flatten()[0])
+                    tf.summary.histogram(f'Actions noise', noise_sample, description='Actions noise in a step')
+                if actions_predicted is not None:
+                    for i in range(actions_predicted.shape[1]):
+                        tf.summary.histogram(f'Actions predicted {i}', actions_predicted[:, i],
+                                             description='Actions predicted in a step')
+                for i in range(actions_noised.shape[1]):
+                    tf.summary.histogram(f'Actions performed {i}', actions_noised[:, i],
+                                         description='Actions performed (noised) in a step')
+                tf.summary.histogram('Rewards', rewards, description='Rewards in a step')
+                stats['reward'] = np.mean(rewards)
+                tf.summary.histogram('Rewards shaped', rewards_shaped, description='Shaped rewards in a step')
+                tf.summary.histogram('Rewards shaping difference', np.asarray(rewards_shaped) - np.asarray(rewards),
+                                     description='Reward shaping offset in a step')
+                if not np.isnan(worker_prev_return).any():
+                    tf.summary.histogram('Returns actual', worker_prev_return, description='Non-discounted returns')
+                    return_mean = worker_prev_return.mean()
+                    tf.summary.scalar('Returns actual mean', return_mean, description='Non-discounted returns')
+                    stats['train.return'] = worker_prev_return.mean()
+                    if step >= args.bootstrap and (best_train_return is None or return_mean > best_train_return):
+                        best_train_return = return_mean
+                        network.save(os.path.join(network_output_path, f'train_{int(return_mean)}'))
+                if not np.isnan(worker_prev_length).any():
+                    tf.summary.histogram('Episode length', worker_prev_length)
+                    tf.summary.scalar('Episode length mean', worker_prev_length.mean())
+                    stats['train.episode_length'] = worker_prev_length.mean()
+            if len(replay_buffer) >= args.batch_size:
+                indexes = np.random.choice(len(replay_buffer), size=args.batch_size)
+                states, actions, returns = network.unwrap_transitions(replay_buffer[i] for i in indexes)
                 with writer_train.as_default():
-                    tf.summary.histogram('Velocity X', [state[2] for state in states],
-                                         description='Horizontal velocity in a step')
-                    if noise_sample is not None:
-                        tf.summary.scalar('Noise sample', noise_sample.flatten()[0])
-                        tf.summary.histogram(f'Actions noise', noise_sample, description='Actions noise in a step')
-                    if actions_predicted is not None:
-                        for i in range(actions_predicted.shape[1]):
-                            tf.summary.histogram(f'Actions predicted {i}', actions_predicted[:, i],
-                                                 description='Actions predicted in a step')
-                    for i in range(actions_noised.shape[1]):
-                        tf.summary.histogram(f'Actions performed {i}', actions_noised[:, i],
-                                             description='Actions performed (noised) in a step')
-                    tf.summary.histogram('Rewards', rewards, description='Rewards in a step')
-                    stats['reward'] = np.mean(rewards)
-                    tf.summary.histogram('Rewards shaped', rewards_shaped, description='Shaped rewards in a step')
-                    tf.summary.histogram('Rewards shaping difference', np.asarray(rewards_shaped) - np.asarray(rewards),
-                                         description='Reward shaping offset in a step')
-                    if not np.isnan(worker_prev_return).any():
-                        tf.summary.histogram('Returns actual', worker_prev_return, description='Non-discounted returns')
-                        return_mean = worker_prev_return.mean()
-                        tf.summary.scalar('Returns actual mean', return_mean, description='Non-discounted returns')
-                        stats['train.return'] = worker_prev_return.mean()
-                        if step >= args.bootstrap and (best_train_return is None or return_mean > best_train_return):
-                            best_train_return = return_mean
-                            network.save(os.path.join(network_output_path, f'train_{int(return_mean)}'))
-                    if not np.isnan(worker_prev_length).any():
-                        tf.summary.histogram('Episode length', worker_prev_length)
-                        tf.summary.scalar('Episode length mean', worker_prev_length.mean())
-                        stats['train.episode_length'] = worker_prev_length.mean()
-                if len(replay_buffer) >= args.batch_size:
-                    indexes = np.random.choice(len(replay_buffer), size=args.batch_size)
-                    states, actions, returns = network.unwrap_transitions(replay_buffer[i] for i in indexes)
-                    with writer_train.as_default():
-                        tf.summary.histogram('Actions', actions, description='Actions performed in a batch')
-                        tf.summary.histogram('Returns estimated', returns,
-                                             description='Estimated returns of state-action pairs in a batch')
-                        tf.summary.scalar('Returns estimated mean', returns.mean(),
-                                          description='Estimated returns of state-action pairs in a batch')
-                        tf.summary.scalar('Returns estimated std', returns.std(),
-                                          description='Estimated returns of state-action pairs in a batch')
-                        network.train_value(states, actions, returns)
-                        if step % args.policy_update_period == 0:
-                            network.train_policy(states)
-                states = next_states
+                    tf.summary.histogram('Actions', actions, description='Actions performed in a batch')
+                    tf.summary.histogram('Returns estimated', returns,
+                                         description='Estimated returns of state-action pairs in a batch')
+                    tf.summary.scalar('Returns estimated mean', returns.mean(),
+                                      description='Estimated returns of state-action pairs in a batch')
+                    tf.summary.scalar('Returns estimated std', returns.std(),
+                                      description='Estimated returns of state-action pairs in a batch')
+                    network.train_value(states, actions, returns)
+                    if step % args.policy_update_period == 0:
+                        network.train_policy(states)
+            states = next_states
+            try:
+                t.set_postfix(stats)
                 t.update()
+            except UnboundLocalError:
+                pass
     finally:
         if args.trace:
             with writer_train.as_default():
@@ -425,6 +433,11 @@ if __name__ == '__main__':
         network.save(os.path.join(network_output_path, 'final'))
         if args.render_final:
             evaluate(new_environment(), network, episodes=1, render_each=1)
+
+    try:
+        t.close()
+    except UnboundLocalError:
+        pass
 
     logging.info('Final evaluation...')
     evaluate(new_environment(), network, render_each=args.render_each, final_evaluation=True)

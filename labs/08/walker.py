@@ -272,8 +272,6 @@ if __name__ == '__main__':
 
     logging.debug(tf.config.experimental.list_physical_devices())
 
-    logging.info('Initializing...')
-
     # Fix random seeds and number of threads
     np.random.seed(args.seed)
     tf.random.set_seed(args.seed)

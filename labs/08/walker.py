@@ -281,15 +281,6 @@ if __name__ == '__main__':
     tf.config.threading.set_intra_op_parallelism_threads(args.threads)
     assert tf.executing_eagerly()
 
-    run_name = datetime.now().strftime('%Y%m%d-%H%M%S')
-    if args.trace:
-        tf.summary.trace_on()
-    log_dir = os.path.join(args.log_dir, args.env, run_name)
-    writer_train = tf.summary.create_file_writer(os.path.join(log_dir, 'train'))
-    with writer_train.as_default():
-        tf.summary.text('args', str(args), step=0)
-    writer_evaluate = tf.summary.create_file_writer(os.path.join(log_dir, 'evaluate'))
-
 
     def new_environment():
         return gym_evaluator.GymEnvironment(args.env)
@@ -304,9 +295,17 @@ if __name__ == '__main__':
     except tf.errors.NotFoundError:
         logging.info('Network loading failed gracefully.')
 
-    network_output_path = os.path.join('walker', args.env, run_name)
-
     if not network.loaded or args.retrain:
+        run_name = datetime.now().strftime('%Y%m%d-%H%M%S')
+        if args.trace:
+            tf.summary.trace_on()
+        log_dir = os.path.join(args.log_dir, args.env, run_name)
+        writer_train = tf.summary.create_file_writer(os.path.join(log_dir, 'train'))
+        with writer_train.as_default():
+            tf.summary.text('args', str(args), step=0)
+        writer_evaluate = tf.summary.create_file_writer(os.path.join(log_dir, 'evaluate'))
+
+        network_output_path = os.path.join('walker', args.env, run_name)
         try:
             logging.info('Training...')
             noise = None

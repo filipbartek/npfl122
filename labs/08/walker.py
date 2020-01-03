@@ -258,7 +258,7 @@ if __name__ == '__main__':
     parser.add_argument("--render_final", action="store_true")
     parser.add_argument("--noise_type", choices=["normal", "Ornstein–Uhlenbeck"], default="normal")
     parser.add_argument("--policy_update_period", default=2, type=int)
-    parser.add_argument("--input_network", default="walker_network")
+    parser.add_argument("--input_network", default="walker/default")
     parser.add_argument("--log_dir", default="logs/walker")
     parser.add_argument("--steps", default=1000000, type=int)
     parser.add_argument("--retrain", action="store_true")

@@ -238,7 +238,7 @@ if __name__ == '__main__':
     parser.add_argument("--noise_sigma", default=0.5, type=float, help="UB noise sigma.")
     parser.add_argument("--noise_theta", default=0.15, type=float, help="UB noise theta.")
     parser.add_argument("--gamma", default=0.99, type=float, help="Discounting factor.")
-    parser.add_argument("--hidden_layer", default=32, type=int, help="Size of hidden layer.")
+    parser.add_argument("--hidden_layer", default=128, type=int, help="Size of hidden layer.")
     parser.add_argument("--learning_rate", default=0.001, type=float, help="Learning rate.")
     parser.add_argument("--render_each", default=0, type=int, help="Render some episodes.")
     parser.add_argument("--target_tau", default=0.01, type=float, help="Target network update weight.")

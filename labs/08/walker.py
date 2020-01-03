@@ -287,6 +287,12 @@ if __name__ == '__main__':
     env = new_environment()
 
     try:
+        import walker_network
+        logging.debug('Network module imported.')
+    except ModuleNotFoundError:
+        logging.debug('Network module import failed gracefully.')
+
+    try:
         network = Network(env, args)
         network.load(args.input_network)
         logging.info('Network loaded.')

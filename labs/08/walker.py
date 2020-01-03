@@ -257,6 +257,7 @@ if __name__ == '__main__':
     parser.add_argument("--policy_update_period", default=2, type=int)
     parser.add_argument("--input_network", default="walker_network")
     parser.add_argument("--log_dir", default="logs/walker")
+    parser.add_argument("--steps", default=1000000, type=int)
     # TODO: Consider early resetting stall episodes.
     args = parser.parse_args()
 
@@ -320,7 +321,7 @@ if __name__ == '__main__':
             stats = dict()
             best_evaluate_return = None
             best_train_return = None
-            for step in count():
+            for step in range(args.steps):
                 tf.summary.experimental.set_step(step)
                 t.set_postfix(stats)
                 if args.evaluate_each and step % args.evaluate_each == 0:

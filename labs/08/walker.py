@@ -183,7 +183,6 @@ class Network:
 
 
 def evaluate(env, network, episodes=100, render_each=None, final_evaluation=False):
-    logging.info(f'Evaluating for {episodes} episodes...')
     # TODO: Parallelize.
     returns = []
     for _ in range(episodes):

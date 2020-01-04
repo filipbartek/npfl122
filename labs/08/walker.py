@@ -237,7 +237,7 @@ if __name__ == '__main__':
     import argparse
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--batch_size", default=64, type=int, help="Batch size.")
+    parser.add_argument("--batch_size", default=256, type=int, help="Batch size.")
     parser.add_argument("--env", default="BipedalWalker-v2", type=str, help="Environment.")
     # Maximum episode length: 1600
     parser.add_argument("--evaluate_each", default=1600, type=int, help="Evaluate each number of batches.")

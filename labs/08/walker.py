@@ -260,7 +260,7 @@ if __name__ == '__main__':
     parser.add_argument("--policy_update_period", default=2, type=int)
     parser.add_argument("--input_network", default="walker/default")
     parser.add_argument("--log_dir", default="logs/walker")
-    parser.add_argument("--steps", default=1000000, type=int)
+    parser.add_argument("--steps", default=200000, type=int)
     parser.add_argument("--retrain", action="store_true")
     # TODO: Consider early resetting stall episodes.
     args = parser.parse_args()

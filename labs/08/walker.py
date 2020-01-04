@@ -240,7 +240,7 @@ if __name__ == '__main__':
     parser.add_argument("--batch_size", default=256, type=int, help="Batch size.")
     parser.add_argument("--env", default="BipedalWalker-v2", type=str, help="Environment.")
     # Maximum episode length: 1600
-    parser.add_argument("--evaluate_each", default=1600, type=int, help="Evaluate each number of batches.")
+    parser.add_argument("--evaluate_each", default=1000, type=int, help="Evaluate each number of batches.")
     parser.add_argument("--evaluate_for", default=10, type=int, help="Evaluate for number of batches.")
     parser.add_argument("--noise_sigma", default=0.5, type=float, help="UB noise sigma.")
     parser.add_argument("--noise_theta", default=0.15, type=float, help="UB noise theta.")

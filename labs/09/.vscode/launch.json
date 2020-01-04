@@ -1,0 +1,17 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python: Current File",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/az_quiz_evaluator.py",
+            "args": ["az_quiz_player_alpha_zero", "az_quiz_player_simple_heuristic"],
+            //"args": ["az_quiz_player_interactive_keyboard", "az_quiz_player_simple_heuristic"],
+            "console": "integratedTerminal"
+        }
+    ]
+}
